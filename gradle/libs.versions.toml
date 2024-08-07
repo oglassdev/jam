@@ -1,0 +1,14 @@
+[versions]
+minestom = "461c56e749"
+kotstom = "0.3.0"
+minigamelib = "0.1.0-alpha.4"
+
+[libraries]
+minestom = { group = "net.minestom", name = "minestom-snapshots", version.ref = "minestom" }
+minigamelib = { module = "net.bladehunt:minigame-lib", version.ref = "minigamelib" }
+kotstom-core = { module = "net.bladehunt:kotstom", version.ref = "kotstom" }
+kotstom-serialization = { module = "net.bladehunt:kotstom-serialization", version.ref = "kotstom" }
+kotstom-adventure-serialization = { module = "net.bladehunt:kotstom-adventure-serialization", version.ref = "kotstom" }
+
+[bundles]
+kotstom = ["kotstom-core", "kotstom-serialization", "kotstom-adventure-serialization"]
