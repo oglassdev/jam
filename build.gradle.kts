@@ -12,10 +12,21 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-    maven("https://mvn.bladehunt.net")
+    maven("https://mvn.bladehunt.net/releases")
+    maven("https://jitpack.io")
 }
 
 dependencies {
+    implementation(libs.minestom)
+    implementation(libs.minigamelib)
+    implementation(libs.bundles.kotstom)
+    implementation(libs.polar)
+    implementation(libs.minestompvp)
+    implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.bundles.logback)
+
     testImplementation(kotlin("test"))
 }
 task<Zip>("compressResourcePack") {
