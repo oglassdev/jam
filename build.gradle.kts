@@ -8,6 +8,7 @@ plugins {
 }
 
 group = "team.ktusers"
+
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -18,6 +19,7 @@ repositories {
 
 dependencies {
     implementation(libs.minestom)
+    implementation(libs.blade)
     implementation(libs.minigamelib)
     implementation(libs.bundles.kotstom)
     implementation(libs.polar)
@@ -29,6 +31,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
 }
+
 task<Zip>("compressResourcePack") {
     destinationDirectory.set(layout.projectDirectory.dir("resource_pack").dir("compressed"))
     archiveFileName = "resource_pack_${version}.zip"
@@ -66,9 +69,9 @@ task("generateResourcePack") {
 
 tasks.build { dependsOn("shadowJar") }
 
-tasks.test {
-    useJUnitPlatform()
-}
+tasks.test { useJUnitPlatform() }
+
 kotlin {
     jvmToolchain(21)
+    compilerOptions.freeCompilerArgs.add("-Xcontext-receivers")
 }
