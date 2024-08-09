@@ -14,5 +14,15 @@
       "yaw": 180,
       "pitch": 0
     }
+  },
+  "game": {
+    "spawn_pos": {
+      "x": 0.5,
+      "y": -59.0,
+      "z": 0.5,
+      "yaw": 0,
+      "pitch": 0
+    },
+    "spawn_radius": 5
   }
 }
