@@ -4,7 +4,7 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.utils.NamespaceID
 
 object JamBlock {
-    val BLACK = Block.BLACK_CONCRETE
+    val BLACK = Block.BLACKSTONE
     val BLACK_SLAB = Block.BLACKSTONE_SLAB
     val BLACK_STAIRS = Block.BLACKSTONE_STAIRS
 

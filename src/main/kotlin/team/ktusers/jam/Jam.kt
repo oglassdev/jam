@@ -22,6 +22,7 @@ val Json = Json {
 
 val AdventureNbt = AdventureNbt {
     serializersModule = MinestomModule
+    shouldEncodeDefaults = true
 }
 
 @OptIn(ExperimentalSerializationApi::class)
