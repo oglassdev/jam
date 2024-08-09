@@ -1,8 +1,6 @@
 package team.ktusers.jam.player
 
 import io.github.togar2.pvp.player.CombatPlayer
-import java.util.*
-import java.util.function.Function
 import net.minestom.server.ServerFlag
 import net.minestom.server.collision.PhysicsResult
 import net.minestom.server.collision.PhysicsUtils
@@ -13,6 +11,8 @@ import net.minestom.server.event.entity.EntityVelocityEvent
 import net.minestom.server.network.player.PlayerConnection
 import net.minestom.server.potion.PotionEffect
 import net.minestom.server.utils.chunk.ChunkUtils
+import java.util.*
+import java.util.function.Function
 
 class JamPlayer(uuid: UUID, username: String, playerConnection: PlayerConnection) :
     CombatPlayer, Player(uuid, username, playerConnection) {
