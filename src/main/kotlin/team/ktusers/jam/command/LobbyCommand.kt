@@ -10,6 +10,9 @@ val LobbyCommand = kommand {
     buildSyntax {
         onlyPlayers()
 
-        executor { player.setInstance(Lobby) }
+        executor {
+            if (player.instance == Lobby) return@executor
+            player.setInstance(Lobby)
+        }
     }
 }
