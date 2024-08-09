@@ -14,6 +14,7 @@ import team.ktusers.jam.command.CutsceneCommand
 import team.ktusers.jam.command.JoinCommand
 import team.ktusers.jam.command.LobbyCommand
 import team.ktusers.jam.config.JamConfig
+import team.ktusers.jam.game.JamGame
 
 val Json = Json {
     serializersModule = MinestomConfigModule
@@ -35,6 +36,15 @@ suspend fun main() = blade(
         "minestom.chunk-view-distance" to 18
     )
 ) {
+    JamGame
+
+    /*
+    FileOutputStream(File("world.polar")).use { stream ->
+        stream.write(PolarWriter.write(AnvilPolar.anvilToPolar(Path("./world"))))
+    }
+
+     */
+
     CommandManager.register(LobbyCommand, JoinCommand, CutsceneCommand)
     onConfigure {
         spawningInstance = Lobby

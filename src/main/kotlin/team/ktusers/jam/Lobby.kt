@@ -33,8 +33,6 @@ val Lobby = buildInstance {
     npc.addPassenger(PlayerNpc.Name(text("Queue", TextDecoration.BOLD, color = GOLD)))
 
     eventNode.listen<PlayerSpawnEvent> { event ->
-        if (!event.isFirstSpawn) return@listen
-
         event.player.teleport(Config.lobby.spawnPos)
 
         event.player.sendPlayerListHeaderAndFooter(
@@ -44,7 +42,7 @@ val Lobby = buildInstance {
 
         instance.sendActionBar(actionbarMessage)
     }
-    
+
     eventNode.listen<RemoveEntityFromInstanceEvent> { event ->
         val player = event.entity as? Player ?: return@listen
 
