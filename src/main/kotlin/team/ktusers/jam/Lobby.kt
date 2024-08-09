@@ -2,7 +2,6 @@ package team.ktusers.jam
 
 import net.bladehunt.blade.dsl.instance.buildInstance
 import net.bladehunt.kotstom.dsl.listen
-import net.bladehunt.kotstom.dsl.scheduleTask
 import net.bladehunt.kotstom.extension.adventure.plus
 import net.bladehunt.kotstom.extension.adventure.text
 import net.kyori.adventure.text.Component.empty
@@ -14,7 +13,6 @@ import net.minestom.server.event.entity.EntityDamageEvent
 import net.minestom.server.event.instance.RemoveEntityFromInstanceEvent
 import net.minestom.server.event.player.*
 import net.minestom.server.event.trait.CancellableEvent
-import net.minestom.server.timer.TaskSchedule
 import team.ktusers.jam.util.PlayerNpc
 
 private val actionbarMessage = text("Click the NPC to queue", TextDecoration.BOLD, color = GOLD)
@@ -23,10 +21,6 @@ val Lobby = buildInstance {
     enableLighting()
 
     polar { fromResource("/lobby.polar") }
-
-    scheduler.scheduleTask(repeat = TaskSchedule.seconds(1)) {
-        instance.sendActionBar(actionbarMessage)
-    }
 
     val npc = PlayerNpc("oglass_queue_npc", Skin.KING)
     npc.setInstance(instance, Config.lobby.npcPos).join()
