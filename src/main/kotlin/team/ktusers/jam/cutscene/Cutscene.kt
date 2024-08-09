@@ -16,7 +16,12 @@ import net.minestom.server.timer.TaskSchedule
 import team.ktusers.jam.util.PlayerNpc
 import java.util.*
 
-class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positions: List<CutscenePosition>, texts: List<CutsceneText>) :
+class Cutscene(
+    instance: Instance,
+    val createPlayerReplacements: Boolean,
+    positions: List<CutscenePosition>,
+    texts: List<CutsceneText>
+) :
     Viewable {
     val camera: Camera = Camera()
 
@@ -39,11 +44,15 @@ class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positi
         }
 
         launch {
-            viewers.forEach { it.playSound(Sound.sound(
-                Key.key("jam:start_cutscene"),
-                Sound.Source.VOICE,
-                1f, 1f
-            ), camera) }
+            viewers.forEach {
+                it.playSound(
+                    Sound.sound(
+                        Key.key("jam:start_cutscene"),
+                        Sound.Source.VOICE,
+                        1f, 1f
+                    ), camera
+                )
+            }
             texts.forEach { text ->
                 viewers.forEach { player ->
                     text.show(player)
@@ -72,6 +81,7 @@ class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positi
             val npc = PlayerNpc(player.username + "_", player.skin)
             npc.updateViewableRule { entity -> entity.uuid == uuid }
             npc.setInstance(player.instance, player.position)
+            npc.setNoGravity(false)
             npcs[uuid] = npc
         }
         player.spectate(camera)
@@ -88,7 +98,11 @@ class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positi
             )
         )
 
-        npcs.remove(uuid)?.remove()
+        npcs.remove(uuid)?.also { npc ->
+            player.teleport(npc.position)
+            npc.remove()
+        }
+
         originalGameModes.remove(uuid)
     }
 
