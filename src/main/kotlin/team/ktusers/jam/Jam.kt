@@ -4,11 +4,11 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import net.bladehunt.blade.blade
+import net.bladehunt.blade.module.PropertiesModule
 import net.bladehunt.kotstom.serialization.MinestomConfigModule
 import net.bladehunt.kotstom.serialization.MinestomModule
 import net.bladehunt.kotstom.serialization.adventure.AdventureNbt
 import team.ktusers.jam.config.JamConfig
-import team.ktusers.jam.module.PropertiesModule
 
 val Json = Json {
     serializersModule = MinestomConfigModule
