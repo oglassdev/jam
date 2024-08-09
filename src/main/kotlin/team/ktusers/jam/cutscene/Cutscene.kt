@@ -1,7 +1,11 @@
 package team.ktusers.jam.cutscene
 
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
 import net.bladehunt.kotstom.extension.await
+import net.kyori.adventure.key.Key
+import net.kyori.adventure.sound.Sound
 import net.minestom.server.Viewable
 import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
@@ -12,11 +16,12 @@ import net.minestom.server.timer.TaskSchedule
 import team.ktusers.jam.util.PlayerNpc
 import java.util.*
 
-class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positions: List<CutscenePosition>) :
+class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positions: List<CutscenePosition>, texts: List<CutsceneText>) :
     Viewable {
     val camera: Camera = Camera()
 
     val positions = positions.iterator()
+    val texts = texts.iterator()
 
     init {
         if (positions.isNotEmpty()) {
@@ -24,11 +29,26 @@ class Cutscene(instance: Instance, val createPlayerReplacements: Boolean, positi
         }
     }
 
-    suspend fun start() {
-        positions.forEach { pos ->
-            (camera.entityMeta as TextDisplayMeta).posRotInterpolationDuration = pos.duration
-            camera.teleport(pos.pos).await()
-            camera.scheduler().await(TaskSchedule.tick(pos.duration * 2))
+    suspend fun start() = coroutineScope {
+        launch {
+            positions.forEach { pos ->
+                (camera.entityMeta as TextDisplayMeta).posRotInterpolationDuration = pos.duration
+                camera.teleport(pos.pos).await()
+                camera.scheduler().await(TaskSchedule.tick(pos.duration * 2))
+            }
+        }
+
+        launch {
+            viewers.forEach { it.playSound(Sound.sound(
+                Key.key("jam:start_cutscene"),
+                Sound.Source.VOICE,
+                1f, 1f
+            ), camera) }
+            texts.forEach { text ->
+                viewers.forEach { player ->
+                    text.show(player)
+                }
+            }
         }
     }
 

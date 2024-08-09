@@ -1,8 +1,5 @@
 package team.ktusers.jam.util
 
-import kotlin.collections.MutableMap
-import kotlin.collections.hashMapOf
-import kotlin.collections.set
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.extension.rowSize
 import net.bladehunt.kotstom.extension.set
@@ -11,6 +8,7 @@ import net.kyori.adventure.text.Component
 import net.minestom.server.event.inventory.InventoryPreClickEvent
 import net.minestom.server.inventory.InventoryType
 import net.minestom.server.item.ItemStack
+import kotlin.collections.set
 
 class SimpleGui(inventoryType: InventoryType, title: Component) :
     EventNodeInventory(inventoryType, title) {
