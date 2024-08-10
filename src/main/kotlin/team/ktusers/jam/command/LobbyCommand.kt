@@ -25,7 +25,7 @@ val LobbyCommand = kommand {
 
         executor {
             if (player.instance == Lobby) {
-                player.sendMessage(text("Teleporting to spawn...", DARK_GRAY))
+                player.sendMessage(Component.newline() + text("Teleporting to spawn...", DARK_GRAY))
                 player.playSound(
                     Sound.sound()
                         .type(SoundEvent.ENTITY_ENDERMAN_TELEPORT)
@@ -37,7 +37,7 @@ val LobbyCommand = kommand {
 
             if (player.game != null) {
                 if (player.hasTag(LeaveTag)) {
-                    player.sendMessage(text("Sending to lobby...", DARK_GRAY))
+                    player.sendMessage(Component.newline() + text("Sending to lobby...", DARK_GRAY))
                     player.setInstance(Lobby)
                     player.removeTag(LeaveTag)
 
@@ -45,7 +45,8 @@ val LobbyCommand = kommand {
                 }
 
                 player.sendMessage(
-                    text("Are you sure you want to leave?", RED) + Component.newline() +
+                    Component.newline() +
+                            text("Are you sure you want to leave?", RED) + Component.newline() +
                             text("ʀᴜɴ ᴛʜᴇ ᴄᴏᴍᴍᴀɴᴅ ᴀɢᴀɪɴ ᴛᴏ ᴄᴏɴꜰɪʀᴍ.", GRAY)
                 )
                 player.setTag(LeaveTag, true)
@@ -55,8 +56,8 @@ val LobbyCommand = kommand {
                 return@executor
             }
 
-            player.sendMessage(text("Sending to lobby...", DARK_GRAY))
             player.setInstance(Lobby)
+            player.sendMessage(Component.newline() + text("Sending to lobby...", DARK_GRAY))
         }
     }
 }
