@@ -14,6 +14,8 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
     implementation("com.squareup:kotlinpoet:1.18.1")
+    implementation("com.github.ajalt.colormath:colormath:3.6.0")
+    implementation("com.sksamuel.scrimage:scrimage-core:4.1.3")
     implementation(libs.kotlinx.coroutines)
     implementation(libs.minestom)
     implementation(libs.kotlinx.serialization.json)

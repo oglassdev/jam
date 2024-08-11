@@ -20,3 +20,7 @@ data class ModelData(
     val model: String
 )
 
+@Serializable
+data class Model(
+    val textures: Map<String, String>
+)

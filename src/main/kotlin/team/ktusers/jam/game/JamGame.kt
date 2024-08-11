@@ -61,21 +61,33 @@ class JamGame : InstancedGame(
                 for (x in 0..15) {
                     for (y in -64..30) {
                         for (z in 0..15) {
-                            val current = chunk.getBlock(x, y, z)
-                            val newBlock = JamBlock.mapped[current.namespace()] ?: continue
+                            try {
+                                val current = chunk.getBlock(x, y, z)
+                                if (current.isAir) continue
+                                val block = current.namespace().path()
+                                val newBlock = if (block.contains("stairs", ignoreCase = true)) JamBlock.BLACK_STAIRS
+                                else if (block.contains("slab", ignoreCase = true)) JamBlock.BLACK_SLAB
+                                else if (block.contains("wall", ignoreCase = true)) JamBlock.BLACK_WALL
+                                else if (current.isSolid) JamBlock.BLACK
+                                else continue
 
-                            batch.setBlock(
-                                x + chunk.chunkX * 16,
-                                y + chunk.chunkZ * 16,
-                                z,
-                                newBlock.withNbt(current.nbt()).withProperties(current.properties())
-                            )
+                                batch.setBlock(
+                                    x + chunk.chunkX * 16,
+                                    y,
+                                    z + chunk.chunkZ * 16,
+                                    newBlock.withNbt(current.nbt()).withProperties(current.properties())
+                                )
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
                         }
                     }
                 }
             }
 
-            batch.apply(instance) {}
+            batch.apply(instance) {
+                println("Applied batch")
+            }
         }
 
         eventNode.listen<PlayerSpawnEvent> {
