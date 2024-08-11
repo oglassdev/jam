@@ -1,6 +1,6 @@
 package team.ktusers.gen
 
-import com.github.ajalt.colormath.model.Oklab
+import com.github.ajalt.colormath.calculate.differenceCIE2000
 import com.github.ajalt.colormath.model.RGB
 import com.sksamuel.scrimage.ImmutableImage
 import com.squareup.kotlinpoet.*
@@ -15,10 +15,7 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.abs
 import kotlin.reflect.javaType
 import kotlin.reflect.typeOf
 
@@ -92,31 +89,33 @@ suspend fun main() {
                 if (textureName.contains("minecraft:item")) return@launch
                 val texture = "./generated/input/textures/$textureName.png"
 
-                val color: Oklab
+                var color: RGB? = null
                 try {
-                    val loaded = imageLoader.fromFile(File(texture)).average()
-                    color = RGB(loaded.red, loaded.green, loaded.blue).toOklab()
+                    val loaded = imageLoader.fromFile(File(texture)).pixels()
+                        .mapNotNull { pixel ->
+                            pixel.takeIf { pixel.alpha() > 10 }?.let { px ->
+                                RGB(
+                                    (px.red().floorDiv(16) / 16.0).toFloat(),
+                                    (px.green().floorDiv(16) / 16.0).toFloat(),
+                                    (px.blue().floorDiv(16) / 16.0).toFloat()
+                                )
+                            }
+                        }
+                        .groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
 
+                    println(loaded?.let { color -> "${file.name} ${color.redInt}, ${color.greenInt}, ${color.blueInt}" })
+                    if (loaded != null) color = loaded
                 } catch (e: Exception) {
                     e.printStackTrace()
                     return@launch
                 }
 
-                val rgb = mapOf(
-                    "Palette.RED" to deltaE2000(Palette.RED, color),
-                    "Palette.ORANGE" to deltaE2000(Palette.ORANGE, color),
-                    "Palette.YELLOW" to deltaE2000(Palette.YELLOW, color),
-                    "Palette.GREEN" to deltaE2000(Palette.GREEN, color),
-                    "Palette.BLUE" to deltaE2000(Palette.BLUE, color),
-                    "Palette.INDIGO" to deltaE2000(Palette.INDIGO, color),
-                    "Palette.VIOLET" to deltaE2000(Palette.VIOLET, color),
-                    "Palette.GREY" to deltaE2000(Palette.GREY, color)
-                ).minBy { it.value }.key
+                if (color == null) return@launch
 
                 statements.add(
                     "this.register(Block.${
                         block.namespace().path().uppercase()
-                    }, $rgb)"
+                    }, ${findClosestPaletteColor(color)})"
                 )
             }
         } ?: throw IllegalStateException("No blockstates were found")
@@ -265,39 +264,19 @@ suspend fun main() {
     paletteFile.writeTo(File("./src/generated/kotlin"))
 }
 
-fun deltaE2000(lab1: Oklab, lab2: Oklab): Double {
-    val l = lab1.l - lab2.l
-    val a = lab1.a - lab2.a
-    val b = lab1.b - lab2.b
-
-    val c1 = sqrt(lab1.a * lab1.a + lab1.b * lab1.b)
-    val c2 = sqrt(lab2.a * lab2.a + lab2.b * lab2.b)
-
-    val deltaC = c1 - c2
-
-    val deltaH = sqrt(a * a + b * b - deltaC * deltaC)
-
-    val kL = 1.0
-    val kC = 1.0
-    val kH = 1.0
+fun findClosestPaletteColor(input: RGB): String {
+    val hsl = input.toHSL()
+    if (abs(hsl.s) < 0.1) return "Palette.GREY"
 
 
-    val sL = 1.0
-    val sC = 1.0 + 0.045 * c1
-    val sH = 1.0 + 0.015 * c1
-
-    val deltaTheta = 0.5236
-    val c1p = c1 * cos(deltaTheta)
-    val c2p = c2 * cos(deltaTheta)
-
-    val rT = -sin(deltaTheta) * (c1p + c2p)
-
-    val deltaE = sqrt(
-        (l / (kL * sL)).pow(2) +
-                (deltaC / (kC * sC)).pow(2) +
-                (deltaH / (kH * sH)).pow(2) +
-                rT * (deltaC / (kC * sC)) * (deltaH / (kH * sH))
-    )
-
-    return deltaE
+    return buildMap {
+        put("Palette.RED", Palette.RED.differenceCIE2000(hsl))
+        put("Palette.ORANGE", Palette.ORANGE.differenceCIE2000(hsl))
+        put("Palette.YELLOW", Palette.YELLOW.differenceCIE2000(hsl))
+        put("Palette.GREEN", Palette.GREEN.differenceCIE2000(hsl))
+        put("Palette.BLUE", Palette.BLUE.differenceCIE2000(hsl))
+        put("Palette.INDIGO", Palette.INDIGO.differenceCIE2000(hsl))
+        put("Palette.VIOLET", Palette.VIOLET.differenceCIE2000(hsl))
+        put("Palette.GREY", Palette.GREY.differenceCIE2000(hsl))
+    }.minBy { it.value }.key
 }
