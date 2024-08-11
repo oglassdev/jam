@@ -9,7 +9,7 @@
     "attributes": [ "Position" ],
     "samplers": [
         { "name": "DiffuseSampler" },
-        { "name": "DepthSampler" }
+        { "name": "DiffuseDepthSampler" }
     ],
     "uniforms": [
         { "name": "Intensity",   "type": "float",     "count": 1,  "values": [ 1.5 ] },

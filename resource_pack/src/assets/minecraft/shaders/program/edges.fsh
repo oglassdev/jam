@@ -1,27 +1,35 @@
 #version 330 core
 
 uniform sampler2D DiffuseSampler;
-uniform sampler2D DepthSampler;
+uniform sampler2D DiffuseDepthSampler;
 uniform float Threshold;
 uniform float Weight;
+uniform vec2 InSize;
 
 in vec2 texCoord;
 
 out vec4 fragColor;
 
+float near = 5;
+float far = 10000.0;
+float LinearizeDepth(float depth) {
+    float z = depth * 2.0 - 1.0;
+    return (near * far) / (far + near - z * (far - near));
+}
+
 vec3 edgeDetection(vec2 uv) {
-    float depth = texture(DepthSampler, uv).r;
+    float depth = LinearizeDepth(texture(DiffuseDepthSampler, uv).r);
 
     float dx[9] = float[9](
-        1.0, 0.0, -1.0,
-        2.0, 0.0, -2.0,
-        1.0, 0.0, -1.0
+    1.0, 0.0, -1.0,
+    2.0, 0.0, -2.0,
+    1.0, 0.0, -1.0
     );
 
     float dy[9] = float[9](
-        1.0, 2.0, 1.0,
-        0.0, 0.0, 0.0,
-        -1.0, -2.0, -1.0
+    1.0, 2.0, 1.0,
+    0.0, 0.0, 0.0,
+    -1.0, -2.0, -1.0
     );
 
     float edgeX = 0.0;
@@ -29,7 +37,7 @@ vec3 edgeDetection(vec2 uv) {
 
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
-            float sampleDepth = texture(DepthSampler, uv + vec2(i, j) / vec2(textureSize(DepthSampler, 0))).r;
+            float sampleDepth = LinearizeDepth(texture(DiffuseDepthSampler, uv + vec2(i, j) / InSize).r);
 
             edgeX += sampleDepth * dx[(i + 1) * 3 + (j + 1)];
             edgeY += sampleDepth * dy[(i + 1) * 3 + (j + 1)];
@@ -42,8 +50,7 @@ vec3 edgeDetection(vec2 uv) {
 }
 
 void main() {
-    vec4 texColor = texture(DiffuseSampler, texCoord);
-    vec3 edgeColor = edgeDetection(texCoord);
+    vec4 color = texture(DiffuseSampler, texCoord);
 
-    fragColor = vec4(texColor.rgb * edgeColor, texColor.a);
+    fragColor = vec4(color.rgb * edgeDetection(texCoord), color.a);
 }

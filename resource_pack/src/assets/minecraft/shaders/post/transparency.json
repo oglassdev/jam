@@ -2,6 +2,7 @@
     "targets": [
         "swap",
         "pixelization",
+        "quantization",
         "edges",
         "bloom",
         "output",
@@ -69,18 +70,24 @@
             "outtarget": "pixelization"
         },
         {
-            "name": "edges",
+            "name": "quantization",
             "intarget": "pixelization",
-            "outtarget": "edges"
+            "outtarget": "quantization"
+        },
+        {
+            "name": "edges",
+            "intarget": "quantization",
+            "outtarget": "edges",
+            "auxtargets": [
+                {
+                    "name": "DiffuseDepthSampler",
+                    "id": "minecraft:main:depth"
+                }
+            ]
         },
         {
             "name": "bloom",
             "intarget": "edges",
-            "outtarget": "bloom"
-        },
-        {
-            "name": "quantization",
-            "intarget": "bloom",
             "outtarget": "output"
         },
         {
