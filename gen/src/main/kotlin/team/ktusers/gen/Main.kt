@@ -266,7 +266,7 @@ suspend fun main() {
 
 fun findClosestPaletteColor(input: RGB): String {
     val hsl = input.toHSL()
-    if (abs(hsl.s) < 0.1) return "Palette.GREY"
+    if (abs(hsl.s) < 0.05) return "Palette.GREY"
 
 
     return buildMap {
