@@ -75,3 +75,11 @@ kotlin {
     jvmToolchain(21)
     compilerOptions.freeCompilerArgs.add("-Xcontext-receivers")
 }
+
+sourceSets {
+    main {
+        kotlin {
+            srcDirs("src/main/kotlin", "src/generated/kotlin")
+        }
+    }
+}

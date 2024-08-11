@@ -15,13 +15,13 @@ import net.minestom.server.item.Material
 import team.ktusers.jam.AdventureNbt
 import team.ktusers.jam.event.PlayerCleanseBlockEvent
 import team.ktusers.jam.event.PlayerPreCleanseBlockEvent
-import team.ktusers.jam.game.JamColor
 import team.ktusers.jam.game.JamGame
+import team.ktusers.jam.generated.Palette
 
 @Serializable
 @SerialName("clentaminator")
 data class Clentaminator(
-    val selectedColor: JamColor = JamColor.Red
+    val selectedColor: Int = Palette.RED.red
 ) : JamItem {
     companion object {
         val ClentaminatorItem = item(Material.BREEZE_ROD) {
