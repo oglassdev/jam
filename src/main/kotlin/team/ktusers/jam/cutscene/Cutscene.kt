@@ -57,6 +57,7 @@ class Cutscene(
                 viewers.forEach { player ->
                     text.show(player)
                 }
+                text.await()
             }
         }
     }
