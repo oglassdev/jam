@@ -32,6 +32,7 @@ import net.kyori.adventure.title.Title
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.entity.Player
 import net.minestom.server.event.player.PlayerBlockInteractEvent
+import net.minestom.server.event.player.PlayerChunkLoadEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
@@ -68,6 +69,17 @@ class JamGame : InstancedGame(
         }
     }
 ) {
+    init {
+        instance.eventNode().listen<PlayerChunkLoadEvent> { event ->
+            val points = POINT_COLORS[event.player.currentColor] ?: return@listen
+            event.player.sendPackets(
+                points.map {
+                    BlockChangePacket(it, REFERENCE.getBlock(it))
+                }
+            )
+        }
+    }
+
     companion object {
         private val logger = logger<JamGame>()
 
