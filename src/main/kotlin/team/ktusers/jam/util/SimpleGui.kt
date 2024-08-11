@@ -13,6 +13,7 @@ import kotlin.collections.set
 class SimpleGui(inventoryType: InventoryType, title: Component) :
     EventNodeInventory(inventoryType, title) {
     private val rowSize = inventoryType.rowSize
+
     private val slotHandlers: MutableMap<Int, (InventoryPreClickEvent) -> Unit> = hashMapOf()
 
     init {
