@@ -1,0 +1,92 @@
+{
+    "targets": [
+        "swap",
+        "pixelization",
+        "edges",
+        "bloom",
+        "output",
+        "translucent",
+        "itemEntity",
+        "particles",
+        "clouds",
+        "weather"
+    ],
+    "passes": [
+        {
+            "name": "transparency",
+            "intarget": "minecraft:main",
+            "outtarget": "swap",
+            "auxtargets": [
+                {
+                    "name": "DiffuseDepthSampler",
+                    "id": "minecraft:main:depth"
+                },
+                {
+                    "name": "TranslucentSampler",
+                    "id": "translucent"
+                },
+                {
+                    "name": "TranslucentDepthSampler",
+                    "id": "translucent:depth"
+                },
+                {
+                    "name": "ItemEntitySampler",
+                    "id": "itemEntity"
+                },
+                {
+                    "name": "ItemEntityDepthSampler",
+                    "id": "itemEntity:depth"
+                },
+                {
+                    "name": "ParticlesSampler",
+                    "id": "particles"
+                },
+                {
+                    "name": "ParticlesDepthSampler",
+                    "id": "particles:depth"
+                },
+                {
+                    "name": "CloudsSampler",
+                    "id": "clouds"
+                },
+                {
+                    "name": "CloudsDepthSampler",
+                    "id": "clouds:depth"
+                },
+                {
+                    "name": "WeatherSampler",
+                    "id": "weather"
+                },
+                {
+                    "name": "WeatherDepthSampler",
+                    "id": "weather:depth"
+                }
+            ]
+        },
+        {
+            "name": "pixelization",
+            "intarget": "swap",
+            "outtarget": "pixelization"
+        },
+        {
+            "name": "edges",
+            "intarget": "pixelization",
+            "outtarget": "edges"
+        },
+        {
+            "name": "bloom",
+            "intarget": "edges",
+            "outtarget": "bloom"
+        },
+        {
+            "name": "quantization",
+            "intarget": "bloom",
+            "outtarget": "output"
+        },
+        {
+            "name": "blit",
+            "intarget": "output",
+            "outtarget": "minecraft:main"
+        }
+    ]
+}
