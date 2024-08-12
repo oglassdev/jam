@@ -118,6 +118,14 @@
       },
       {
         "type": "lasers",
+        "objective": "VIOLET",
+        "objective_position": {
+          "x": -7.5,
+          "y": -48.0,
+          "z": 0.5,
+          "yaw": 90,
+          "pitch": 0
+        },
         "lasers": [
           {
             "visible": "RED",
@@ -128,6 +136,32 @@
               "z": 0.5
             },
             "rotation": 1
+          }
+        ]
+      },
+      {
+        "type": "buttons",
+        "color": "INDIGO",
+        "blocks": [
+          {
+            "pos": {
+              "x": -7.5,
+              "y": -48.0,
+              "z": 0.5,
+              "yaw": 90,
+              "pitch": 0
+            },
+            "color": "ORANGE"
+          },
+          {
+            "pos": {
+              "x": -5.5,
+              "y": -48.0,
+              "z": 0.5,
+              "yaw": 90,
+              "pitch": 0
+            },
+            "color": "INDIGO"
           }
         ]
       }
