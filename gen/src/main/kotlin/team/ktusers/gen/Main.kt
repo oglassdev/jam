@@ -348,15 +348,16 @@ suspend fun main() {
 }
 
 fun findClosestPaletteColor(lab: Oklab): String {
+    val color = Oklab(lab.l * 1.18, lab.a, lab.b)
     return buildMap {
-        put("PaletteColor.RED", Palette.RED.differenceCIE2000(lab))
-        put("PaletteColor.ORANGE", Palette.ORANGE.differenceCIE2000(lab))
-        put("PaletteColor.YELLOW", Palette.YELLOW.differenceCIE2000(lab))
-        put("PaletteColor.GREEN", Palette.GREEN.differenceCIE2000(lab))
-        put("PaletteColor.BLUE", Palette.BLUE.differenceCIE2000(lab))
-        put("PaletteColor.INDIGO", Palette.INDIGO.differenceCIE2000(lab))
-        put("PaletteColor.VIOLET", Palette.VIOLET.differenceCIE2000(lab))
-        put("PaletteColor.GREY", Palette.GREY.differenceCIE2000(lab))
+        put("PaletteColor.RED", Palette.RED.differenceCIE2000(color))
+        put("PaletteColor.ORANGE", Palette.ORANGE.differenceCIE2000(color))
+        put("PaletteColor.YELLOW", Palette.YELLOW.differenceCIE2000(color))
+        put("PaletteColor.GREEN", Palette.GREEN.differenceCIE2000(color))
+        put("PaletteColor.BLUE", Palette.BLUE.differenceCIE2000(color))
+        put("PaletteColor.INDIGO", Palette.INDIGO.differenceCIE2000(color))
+        put("PaletteColor.VIOLET", Palette.VIOLET.differenceCIE2000(color))
+        put("PaletteColor.GREY", Palette.GREY.differenceCIE2000(color))
     }.also {
         it.forEach { (color, diff) ->
             println("$color: $diff")
