@@ -1,7 +1,7 @@
 [versions]
 minestom = "461c56e749"
 kotstom = "0.4.0-alpha.0"
-minigamelib = "0.1.0-beta.2"
+minigamelib = "0.1.0-beta.3"
 blade = "0.1.0-alpha.4"
 coroutines = "1.9.0-RC"
 jansi = "2.4.1"
