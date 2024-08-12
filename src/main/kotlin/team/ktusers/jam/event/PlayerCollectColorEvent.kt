@@ -2,26 +2,19 @@ package team.ktusers.jam.event
 
 import net.bladehunt.minigamelib.Game
 import net.bladehunt.minigamelib.event.game.GameEvent
-import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.entity.Player
-import net.minestom.server.event.trait.BlockEvent
 import net.minestom.server.event.trait.CancellableEvent
 import net.minestom.server.event.trait.PlayerInstanceEvent
-import net.minestom.server.instance.block.Block
+import team.ktusers.jam.generated.PaletteColor
 
-data class PlayerPreCleanseBlockEvent(
+data class PlayerCollectColorEvent(
     override val game: Game,
     private val player: Player,
-    private val block: Block,
-    private val position: BlockVec,
-) : GameEvent, PlayerInstanceEvent, BlockEvent, CancellableEvent {
+    val color: PaletteColor
+) : GameEvent, PlayerInstanceEvent, CancellableEvent {
     private var cancelled: Boolean = false
 
     override fun getPlayer(): Player = player
-
-    override fun getBlock(): Block = block
-
-    override fun getBlockPosition(): BlockVec = position
 
     override fun isCancelled(): Boolean = cancelled
 

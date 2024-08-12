@@ -4,7 +4,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import net.bladehunt.blade.dsl.instance.InstanceBuilder
 import net.bladehunt.blade.dsl.instance.buildInstance
@@ -13,7 +12,6 @@ import net.bladehunt.blade.ext.logger
 import net.bladehunt.kotstom.DimensionTypeRegistry
 import net.bladehunt.kotstom.InstanceManager
 import net.bladehunt.kotstom.dsl.listen
-import net.bladehunt.kotstom.dsl.particle
 import net.bladehunt.kotstom.extension.adventure.plus
 import net.bladehunt.kotstom.extension.adventure.text
 import net.bladehunt.minigamelib.InstancedGame
@@ -32,31 +30,33 @@ import net.kyori.adventure.title.Title
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.entity.Player
 import net.minestom.server.event.player.PlayerBlockInteractEvent
-import net.minestom.server.event.player.PlayerChunkLoadEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
+import net.minestom.server.instance.block.Block
+import net.minestom.server.item.ItemStack
 import net.minestom.server.network.packet.server.play.BlockChangePacket
-import net.minestom.server.particle.Particle
 import net.minestom.server.sound.SoundEvent
 import net.minestom.server.utils.NamespaceID
 import net.minestom.server.world.DimensionType
 import team.ktusers.jam.Config
 import team.ktusers.jam.Lobby
+import team.ktusers.jam.config.JamConfig
 import team.ktusers.jam.cutscene.Cutscene
 import team.ktusers.jam.cutscene.CutscenePosition
 import team.ktusers.jam.cutscene.CutsceneText
-import team.ktusers.jam.event.PlayerCleanseBlockEvent
-import team.ktusers.jam.event.PlayerPreCleanseBlockEvent
+import team.ktusers.jam.event.PlayerChangeColorEvent
+import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.generated.BlockColor
+import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.item.ColorSelector
 import team.ktusers.jam.item.getCustomItemData
+import team.ktusers.jam.util.PlayerNpc
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
 class JamGame : InstancedGame(
@@ -70,13 +70,19 @@ class JamGame : InstancedGame(
     }
 ) {
     init {
-        instance.eventNode().listen<PlayerChunkLoadEvent> { event ->
-            val points = POINT_COLORS[event.player.currentColor] ?: return@listen
-            event.player.sendPackets(
-                points.map {
-                    BlockChangePacket(it, REFERENCE.getBlock(it))
+        Config.game.puzzles.forEach { puzzle ->
+            when (puzzle) {
+                is JamConfig.Entrance -> {
+                    val npc = PlayerNpc("_npc_entr")
+                    npc.setInstance(instance, puzzle.pos).thenAccept {
+                        npc.lookAt(Config.game.spawnPos)
+                    }
                 }
-            )
+
+                is JamConfig.Select -> {
+                    instance.setBlock(puzzle.pos, Block.COMMAND_BLOCK)
+                }
+            }
         }
     }
 
@@ -91,7 +97,7 @@ class JamGame : InstancedGame(
                 .ambientLight(13f).build()
         )
 
-        private val POINT_COLORS = hashMapOf<String, MutableList<BlockVec>>()
+        private val POINT_COLORS = hashMapOf<PaletteColor, MutableList<BlockVec>>()
 
         private val REFERENCE = buildInstance {
             polar {
@@ -118,9 +124,15 @@ class JamGame : InstancedGame(
                                     if (current.isAir) continue
                                     val block = current.namespace().path()
                                     val newBlock =
-                                        if (block.contains("stairs", ignoreCase = true)) JamBlock.BLACK_STAIRS
-                                        else if (block.contains("slab", ignoreCase = true)) JamBlock.BLACK_SLAB
-                                        else if (block.contains("wall", ignoreCase = true)) JamBlock.BLACK_WALL
+                                        if (block.contains("stairs", ignoreCase = true)) JamBlock.BLACK_STAIRS.withNbt(
+                                            current.nbt()
+                                        ).withProperties(current.properties())
+                                        else if (block.contains("slab", ignoreCase = true)) JamBlock.BLACK_SLAB.withNbt(
+                                            current.nbt()
+                                        ).withProperties(current.properties())
+                                        else if (block.contains("wall", ignoreCase = true)) JamBlock.BLACK_WALL.withNbt(
+                                            current.nbt()
+                                        ).withProperties(current.properties())
                                         else if (!current.properties().contains("waterlogged")) JamBlock.BLACK
                                         else continue
 
@@ -129,12 +141,12 @@ class JamGame : InstancedGame(
                                         y,
                                         z + chunk.chunkZ * 16
                                     )
-                                    val color = getPaletteColorAsString(BlockColor.getColor(current))
+                                    val color = BlockColor.getColor(current)
                                     POINT_COLORS.getOrPut(color) { arrayListOf() }.add(point)
 
                                     batch.setBlock(
                                         point,
-                                        newBlock.withNbt(current.nbt()).withProperties(current.properties())
+                                        newBlock
                                     )
                                 } catch (e: Exception) {
                                     e.printStackTrace()
@@ -162,7 +174,7 @@ class JamGame : InstancedGame(
 
     var Player.blocksCleansed: Int by store { 0 }
 
-    var Player.currentColor: String by store { "RED" }
+    var Player.currentColor: PaletteColor by store { PaletteColor.RED }
 
     private val _timeElapsed = MutableStateFlow(0)
     val timeElapsed get() = _timeElapsed.asStateFlow()
@@ -238,11 +250,11 @@ class JamGame : InstancedGame(
             players.forEach(cutscene::removeViewer)
         }
         +element {
-            withTimeoutOrNull(30.seconds) {
+            withTimeoutOrNull(9.minutes) {
                 val eventNode = createElementInstanceEventNode()
 
                 players.forEach {
-                    it.inventory.setItemStack(8, ColorSelector().createItemStack())
+                    it.inventory.setItemStack(8, ColorSelector(it.currentColor).createItemStack())
                 }
 
                 eventNode.listen<PlayerBlockInteractEvent> { event ->
@@ -258,73 +270,47 @@ class JamGame : InstancedGame(
 
                     usedItem.onUse(event)
                 }
+                eventNode.listen<PlayerChangeColorEvent> { event ->
+                    val updates = hashMapOf<Int, ItemStack>()
+                    val (_, player, fromColor, toColor) = event
+                    player.inventory.itemStacks.forEachIndexed { slot, itemStack ->
+                        val data = itemStack.getCustomItemData() as? ColorSelector? ?: return@forEachIndexed
 
-                suspendCancellableCoroutine {
-                    var currentAmount = 0
-                    val dnr = setOf(
-                        JamBlock.BLACK.namespace(),
-                        JamBlock.BLACK_STAIRS.namespace(),
-                        JamBlock.BLACK_SLAB.namespace(),
-                        JamBlock.BLACK_WALL.namespace(),
-                    )
-
-                    eventNode.listen<PlayerPreCleanseBlockEvent> { event ->
-                        if (!dnr.contains(event.block.namespace())) event.isCancelled = true
+                        updates[slot] = data.copy(selectedColor = event.toColor).createItemStack()
                     }
 
-                    eventNode.listen<PlayerCleanseBlockEvent> { event ->
-                        sendMessage(text("You've cleaned $currentAmount"))
-                        instance.setBlock(event.blockPosition, REFERENCE.getBlock(event.blockPosition))
+                    updates.forEach { (slot, itemStack) ->
+                        player.inventory.setItemStack(slot, itemStack)
+                    }
 
-                        event.player.playSound(
-                            Sound.sound()
-                                .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
-                                .volume(0.6f)
-                                .pitch(0.8f)
-                                .build()
+                    POINT_COLORS[fromColor]?.let { previous ->
+                        if (teamInventory.isCollected(fromColor)) return@let
+
+                        player.sendPackets(
+                            previous.map {
+                                BlockChangePacket(it, instance.getBlock(it))
+                            }
                         )
-                        event.player.blocksCleansed++
-                        players.forEach { player ->
-                            player.sendPackets(
-                                particle {
-                                    position = event.blockPosition
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(0, 0, 1)
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(0, 1, 0)
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(0, 1, 1)
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(1, 0, 0)
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(1, 0, 1)
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(1, 1, 0)
-                                    particle = Particle.POOF
-                                },
-                                particle {
-                                    position = event.blockPosition.add(1, 1, 1)
-                                    particle = Particle.POOF
-                                }
-                            )
-                        }
-
-                        currentAmount++
-                        if (currentAmount >= 15) it.resume(Unit)
                     }
+                    val points = POINT_COLORS[toColor] ?: return@listen
+                    event.player.sendPackets(
+                        points.map {
+                            BlockChangePacket(it, REFERENCE.getBlock(it))
+                        }
+                    )
+                    player.currentColor = toColor
                 }
+
+                eventNode.listen<PlayerCollectColorEvent> { event ->
+                    val batch = AbsoluteBlockBatch()
+                    POINT_COLORS[event.color]?.forEach {
+                        batch.setBlock(it, REFERENCE.getBlock(it))
+                    }
+                    batch.apply(instance, null)
+                    teamInventory.collectPaletteColor(event.color)
+                }
+
+                delay(100000)
 
             }
         }
@@ -348,23 +334,6 @@ class JamGame : InstancedGame(
             CompletableFuture.allOf(*futures.toTypedArray()).await()
             InstanceManager.unregisterInstance(instance)
         }
-    }
-
-    fun updateColor(player: Player, from: String, to: String) {
-        POINT_COLORS[from]?.let { previous ->
-            player.sendPackets(
-                previous.map {
-                    BlockChangePacket(it, BLACK_REFERENCE.getBlock(it))
-                }
-            )
-        }
-        val points = POINT_COLORS[to] ?: return
-        player.sendPackets(
-            points.map {
-                BlockChangePacket(it, REFERENCE.getBlock(it))
-            }
-        )
-        player.currentColor = to
     }
 
     override fun Player.sendToFallback() {
