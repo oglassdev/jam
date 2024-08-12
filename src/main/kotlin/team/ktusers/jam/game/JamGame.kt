@@ -48,6 +48,7 @@ import team.ktusers.jam.cutscene.CutscenePosition
 import team.ktusers.jam.cutscene.CutsceneText
 import team.ktusers.jam.event.PlayerChangeColorEvent
 import team.ktusers.jam.event.PlayerCollectColorEvent
+import team.ktusers.jam.event.PlayerCollectFragmentEvent
 import team.ktusers.jam.generated.BlockColor
 import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.item.ColorSelector
@@ -159,9 +160,7 @@ class JamGame : InstancedGame(
 
     override val id: NamespaceID = NamespaceID.from("ktusers", "game")
 
-    var Player.blocksCleansed: Int by store { 0 }
-
-    var Player.currentColor: PaletteColor by store { PaletteColor.RED }
+    var Player.currentColor: PaletteColor by store { PaletteColor.NONE }
 
     private val _timeElapsed = MutableStateFlow(0)
     val timeElapsed get() = _timeElapsed.asStateFlow()
@@ -273,7 +272,7 @@ class JamGame : InstancedGame(
                     }
 
                     POINT_COLORS[fromColor]?.let { previous ->
-                        if (teamInventory.isCollected(fromColor)) return@let
+                        if (teamInventory.colors.contains(fromColor)) return@let
 
                         player.sendPackets(
                             previous.map {
@@ -303,7 +302,7 @@ class JamGame : InstancedGame(
                         batch.setBlock(it, REFERENCE.getBlock(it))
                     }
                     batch.apply(instance, null)
-                    teamInventory.collectPaletteColor(event.color)
+                    teamInventory.colors += event.color
 
                     sendMessage(
                         text("+ ", NamedTextColor.GREEN) + text(
@@ -330,6 +329,19 @@ class JamGame : InstancedGame(
                             .build()
                     )
                 }
+                eventNode.listen<PlayerCollectFragmentEvent> { event ->
+                    players.forEach { player ->
+                        if (player.currentColor != event.fragment.color) return@listen
+                        val particle = particle {
+                            particle = Particle.EXPLOSION
+                            count = 2
+                            position = event.fragment.position
+                        }
+                        player.sendPacket(particle)
+                    }
+
+                    teamInventory.collectedFragments += 1
+                }
 
                 delay(100000)
 
@@ -342,7 +354,7 @@ class JamGame : InstancedGame(
                             "Most cured: ",
                             TextDecoration.BOLD,
                             color = NamedTextColor.DARK_GREEN
-                        ) + players.maxBy { it.blocksCleansed }.name
+                        )
             )
             players.forEach {
                 it.inventory.clear()

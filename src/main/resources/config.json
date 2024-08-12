@@ -42,6 +42,22 @@
           "y": -46,
           "z": 12
         }
+      },
+      {
+        "type": "fragments",
+        "final_color": "BLUE",
+        "fragments": [
+          {
+            "color": "RED",
+            "position": {
+              "x": -5.5,
+              "y": -48.0,
+              "z": 0.5,
+              "yaw": 0,
+              "pitch": 0
+            }
+          }
+        ]
       }
     ]
   }

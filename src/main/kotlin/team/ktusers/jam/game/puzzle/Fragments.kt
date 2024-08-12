@@ -3,6 +3,7 @@ package team.ktusers.jam.game.puzzle
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.bladehunt.kotstom.GlobalEventHandler
 import net.bladehunt.kotstom.dsl.item.item
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.dsl.scheduleTask
@@ -17,21 +18,35 @@ import net.minestom.server.entity.metadata.display.ItemDisplayMeta
 import net.minestom.server.entity.metadata.display.TextDisplayMeta
 import net.minestom.server.entity.metadata.other.InteractionMeta
 import net.minestom.server.event.EventNode
+import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.trait.InstanceEvent
 import net.minestom.server.item.Material
 import net.minestom.server.timer.TaskSchedule
 import team.ktusers.jam.event.PlayerChangeColorEvent
+import team.ktusers.jam.event.PlayerCollectFragmentEvent
 import team.ktusers.jam.game.JamGame
 import team.ktusers.jam.generated.PaletteColor
 
 @Serializable
 @SerialName("fragments")
-data class Fragments(val fragments: List<Fragment.Config>) : Puzzle {
+data class Fragments(
+    @SerialName("final_color")
+    val finalColor: PaletteColor,
+    val fragments: List<Fragment.Config>
+) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
         val frags = fragments.map {
-            val fragment = Fragment(it.color)
+            val fragment = Fragment(it.color, finalColor)
             fragment.setGame(game, it.position)
             fragment
+        }
+
+        eventNode.listen<PlayerEntityInteractEvent> { event ->
+            val fragment = (event.target as? Fragment.Hitbox)?.fragment ?: return@listen
+
+            GlobalEventHandler.call(PlayerCollectFragmentEvent(game, event.player, fragment))
+
+            fragment.remove()
         }
 
         eventNode.listen<PlayerChangeColorEvent> { event ->
@@ -45,14 +60,15 @@ data class Fragments(val fragments: List<Fragment.Config>) : Puzzle {
 }
 
 class Fragment(
-    val color: PaletteColor
+    val color: PaletteColor,
+    val finalColor: PaletteColor
 ) : Entity(EntityType.ITEM_DISPLAY) {
-    private val hitbox = Hitbox()
-    private val title = Title()
+    private val hitbox = Hitbox(this)
+    private val title = Title(this)
 
     init {
         editMeta<ItemDisplayMeta> {
-            this.itemStack = item(Material.FEATHER)
+            this.itemStack = item(Material.DISC_FRAGMENT_5)
             isHasNoGravity = true
             posRotInterpolationDuration = 1
             isHasGlowingEffect = true
@@ -63,7 +79,6 @@ class Fragment(
             if (it.instance == null) return@scheduleTask
             it.teleport(it.position.withYaw { yaw -> (yaw + 5).takeIf { yaw < 180 } ?: -180.0 })
         }
-
     }
 
     fun setGame(game: JamGame, position: Pos) {
@@ -91,6 +106,7 @@ class Fragment(
     }
 
     fun view(player: Player) {
+        if (isRemoved) return
         addViewer(player)
         hitbox.addViewer(player)
         title.addViewer(player)
@@ -102,10 +118,16 @@ class Fragment(
         title.removeViewer(player)
     }
 
+    override fun remove() {
+        hitbox.remove()
+        title.remove()
+        super.remove()
+    }
+
     @Serializable
     data class Config(val color: PaletteColor, val position: @Contextual Pos)
 
-    inner class Hitbox : Entity(EntityType.INTERACTION) {
+    class Hitbox(val fragment: Fragment) : Entity(EntityType.INTERACTION) {
         init {
             editMeta<InteractionMeta> {
                 height = 1f
@@ -117,10 +139,11 @@ class Fragment(
         }
     }
 
-    inner class Title : Entity(EntityType.TEXT_DISPLAY) {
+    class Title(val fragment: Fragment) : Entity(EntityType.TEXT_DISPLAY) {
         init {
             editMeta<TextDisplayMeta> {
-                text = text(color.name.lowercase().capitalize(), color.textColor)
+                text =
+                    text(fragment.finalColor.name.lowercase().capitalize() + " Fragment", fragment.finalColor.textColor)
                 billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
                 isHasNoGravity = true
                 this
