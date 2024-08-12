@@ -1,10 +1,7 @@
 package team.ktusers.gen
 
 import com.github.ajalt.colormath.calculate.differenceCIE2000
-import com.github.ajalt.colormath.calculate.differenceCIE76
-import com.github.ajalt.colormath.model.HSL
 import com.github.ajalt.colormath.model.Oklab
-import com.github.ajalt.colormath.model.Oklch
 import com.github.ajalt.colormath.model.RGB
 import com.sksamuel.scrimage.ImmutableImage
 import com.squareup.kotlinpoet.*
@@ -21,8 +18,6 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import kotlin.math.abs
-import kotlin.math.floor
 
 val JsonSerializer = Json {
     ignoreUnknownKeys = true
@@ -104,7 +99,7 @@ suspend fun main() {
                                 val b = px.blue().floorDiv(16) / 16.0
 
                                 val rgb = RGB(
-                                    r ,
+                                    r,
                                     g,
                                     b
                                 )
@@ -323,15 +318,6 @@ suspend fun main() {
                         .build()
                 )
                 .addEnumConstant(
-                    "BLACK",
-                    TypeSpec.anonymousClassBuilder()
-                        .addSuperclassConstructorParameter(
-                            "%L",
-                            "0x" + Palette.BLACK.toSRGB().toHex(withNumberSign = false)
-                        )
-                        .build()
-                )
-                .addEnumConstant(
                     "NONE",
                     TypeSpec.anonymousClassBuilder()
                         .addSuperclassConstructorParameter(
@@ -357,9 +343,7 @@ fun findClosestPaletteColor(lab: Oklab): String {
         put("PaletteColor.INDIGO", Palette.INDIGO.differenceCIE2000(lab))
         put("PaletteColor.VIOLET", Palette.VIOLET.differenceCIE2000(lab))
         put("PaletteColor.GREY", Palette.GREY.differenceCIE2000(lab))
-    }.also {
-        it.forEach { (color, diff) ->
-            println("$color: $diff")
-        }
+    }.onEach { (color, diff) ->
+        println("$color: $diff")
     }.minBy { it.value }.key
 }

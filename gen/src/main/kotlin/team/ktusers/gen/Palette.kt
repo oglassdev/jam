@@ -11,5 +11,4 @@ object Palette {
     val INDIGO = RGB.from255(75, 0, 130).toOklab()
     val VIOLET = RGB.from255(143, 0, 255).toOklab()
     val GREY = RGB.from255(100, 100, 100).toOklab()
-    val BLACK = RGB.from255(25, 24, 28).toOklab()
 }
