@@ -22,8 +22,10 @@ import net.bladehunt.minigamelib.dsl.gameDescriptor
 import net.bladehunt.minigamelib.element.countdown
 import net.bladehunt.minigamelib.util.createElementInstanceEventNode
 import net.bladehunt.minigamelib.util.store
+import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.empty
 import net.kyori.adventure.text.Component.newline
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
@@ -38,6 +40,7 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.network.packet.server.play.BlockChangePacket
 import net.minestom.server.particle.Particle
+import net.minestom.server.scoreboard.Sidebar
 import net.minestom.server.sound.SoundEvent
 import net.minestom.server.utils.NamespaceID
 import net.minestom.server.world.DimensionType
@@ -158,6 +161,58 @@ class JamGame : InstancedGame(
             )
     }
 
+    val bossbar =
+        BossBar.bossBar(text("Colors Collected (0/8)"), 0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS)
+
+    val sidebar: Sidebar = Sidebar(text("cured", TextDecoration.BOLD, color = NamedTextColor.DARK_PURPLE)).apply {
+        createLine(
+            Sidebar.ScoreboardLine(
+                "blank_0",
+                empty(),
+                0,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "timer",
+                text("Time Remaining: 9:00", NamedTextColor.YELLOW),
+                -1,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "blank_1",
+                empty(),
+                -2,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "inv_name",
+                text("Team Inventory", NamedTextColor.YELLOW),
+                -3,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "colors",
+                text("Colors: 0/8", NamedTextColor.GRAY), -4,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "fragments",
+                text("Blue Fragments: 0/${5}", NamedTextColor.GRAY), -5,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+    }
+
     override val id: NamespaceID = NamespaceID.from("ktusers", "game")
 
     var Player.currentColor: PaletteColor by store { PaletteColor.NONE }
@@ -239,6 +294,10 @@ class JamGame : InstancedGame(
             withTimeoutOrNull(9.minutes) {
                 val eventNode = createElementInstanceEventNode()
 
+                showBossBar(bossbar)
+                players.forEach {
+                    sidebar.addViewer(it)
+                }
                 Config.game.puzzles.forEach { it.onElementStart(this@JamGame, eventNode) }
 
                 players.forEach {
@@ -287,13 +346,13 @@ class JamGame : InstancedGame(
                             position = event.player.position.add(0.0, event.player.eyeHeight - 0.5, 0.0)
                         }
                     )
+                    player.currentColor = toColor
                     val points = POINT_COLORS[toColor] ?: return@listen
                     event.player.sendPackets(
                         points.map {
                             BlockChangePacket(it, REFERENCE.getBlock(it))
                         }
                     )
-                    player.currentColor = toColor
                 }
 
                 eventNode.listen<PlayerCollectColorEvent> { event ->
@@ -303,6 +362,13 @@ class JamGame : InstancedGame(
                     }
                     batch.apply(instance, null)
                     teamInventory.colors += event.color
+
+                    bossbar.name(text("Colors Collected (${teamInventory.colors.size}/8)", event.color.textColor))
+                    bossbar.progress(teamInventory.colors.size / 8f)
+                    sidebar.updateLineContent(
+                        "colors",
+                        text("Colors: ${teamInventory.colors.size}/8", NamedTextColor.GRAY)
+                    )
 
                     sendMessage(
                         text("+ ", NamedTextColor.GREEN) + text(
@@ -330,17 +396,18 @@ class JamGame : InstancedGame(
                     )
                 }
                 eventNode.listen<PlayerCollectFragmentEvent> { event ->
-                    players.forEach { player ->
-                        if (player.currentColor != event.fragment.color) return@listen
-                        val particle = particle {
-                            particle = Particle.EXPLOSION
-                            count = 2
-                            position = event.fragment.position
-                        }
-                        player.sendPacket(particle)
+                    val particle = particle {
+                        particle = Particle.EXPLOSION
+                        count = 2
+                        position = event.fragment.position
                     }
+                    event.fragment.sendPacketToViewers(particle)
 
                     teamInventory.collectedFragments += 1
+                    sidebar.updateLineContent(
+                        "fragments",
+                        text("Blue Fragments: ${teamInventory.collectedFragments}/5", NamedTextColor.GRAY)
+                    )
                 }
 
                 delay(100000)
@@ -348,6 +415,10 @@ class JamGame : InstancedGame(
             }
         }
         +element {
+            hideBossBar(bossbar)
+            players.forEach {
+                sidebar.removeViewer(it)
+            }
             sendMessage(
                 text("Game Overview", TextDecoration.BOLD, color = NamedTextColor.DARK_GREEN) + newline() +
                         text(
