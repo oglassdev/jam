@@ -8,11 +8,18 @@
     "fragment": "pixelization",
     "attributes": [ "Position" ],
     "samplers": [
-        { "name": "DiffuseSampler" }
+        { "name": "DiffuseSampler"          },
+        { "name": "DiffuseDepthSampler"     },
+        { "name": "TranslucentDepthSampler" },
+        { "name": "ItemEntityDepthSampler"  },
+        { "name": "ParticlesDepthSampler"   },
+        { "name": "CloudsDepthSampler"      },
+        { "name": "WeatherDepthSampler"     }
     ],
     "uniforms": [
-        { "name": "Quality",       "type": "float",     "count": 1,  "values": [ 0.00256 ] },
-        { "name": "ProjMat",       "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
-        { "name": "InSize",        "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] }
+        { "name": "Threshold",   "type": "float",     "count": 1,  "values": [ 0.0000001192093 ] },
+        { "name": "Weight",      "type": "int",       "count": 1,  "values": [ 1 ] },
+        { "name": "ProjMat",     "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "InSize",      "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] }
     ]
 }
