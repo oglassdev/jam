@@ -24,7 +24,7 @@ import team.ktusers.jam.util.PlayerNpc
 @Serializable
 @SerialName("entrance")
 data class Entrance(val pos: @Contextual Pos) : Puzzle {
-    private val prefix = text("Guide: ", NamedTextColor.GRAY)
+    private val prefix = text("Wanderer: ", NamedTextColor.GRAY)
 
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
         val npc = PlayerNpc("_npc_entr")

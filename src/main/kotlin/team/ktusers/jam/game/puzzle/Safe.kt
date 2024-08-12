@@ -32,7 +32,7 @@ import kotlin.random.Random
 
 @Serializable
 @SerialName("select")
-data class Select(val pos: @Contextual BlockVec) : Puzzle {
+data class Safe(val pos: @Contextual BlockVec) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
         val interaction = Entity(EntityType.INTERACTION)
         interaction.editMeta<InteractionMeta> {
