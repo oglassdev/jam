@@ -34,7 +34,7 @@ data class Entrance(val pos: @Contextual Pos) : Puzzle {
 
         fun onInteract(player: Player) {
             if (hasInteracted) {
-                if (isComplete) player.sendMessage(text("Keep going! I believe in you.", NamedTextColor.RED))
+                if (isComplete) player.sendMessage(prefix + "Keep going! I believe in you!")
                 return
             }
             hasInteracted = true

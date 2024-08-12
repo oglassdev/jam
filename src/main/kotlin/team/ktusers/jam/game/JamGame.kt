@@ -11,6 +11,7 @@ import net.bladehunt.blade.dsl.instance.buildInstance
 import net.bladehunt.blade.ext.loadChunks
 import net.bladehunt.blade.ext.logger
 import net.bladehunt.kotstom.DimensionTypeRegistry
+import net.bladehunt.kotstom.GlobalEventHandler
 import net.bladehunt.kotstom.InstanceManager
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.dsl.particle
@@ -222,14 +223,14 @@ class JamGame : InstancedGame(
         createLine(
             Sidebar.ScoreboardLine(
                 "fragment_blue",
-                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text("0/4", NamedTextColor.DARK_GRAY), -8,
+                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text("0/3", NamedTextColor.DARK_GRAY), -8,
                 Sidebar.NumberFormat.blank()
             )
         )
         createLine(
             Sidebar.ScoreboardLine(
                 "fragment_orange",
-                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text("0/4", NamedTextColor.DARK_GRAY), -9,
+                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text("0/3", NamedTextColor.DARK_GRAY), -9,
                 Sidebar.NumberFormat.blank()
             )
         )
@@ -441,6 +442,7 @@ class JamGame : InstancedGame(
                         count = 2
                         position = event.fragment.position
                     }
+
                     event.fragment.sendPacketToViewers(particle)
 
                     event.fragment.viewersAsAudience.playSound(
@@ -451,15 +453,53 @@ class JamGame : InstancedGame(
                             .build()
                     )
 
-                    teamInventory.collectedFragments += 1
-                    sidebar.updateLineContent(
-                        "fragment_blue",
-                        text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text(
-                            "${teamInventory.collectedFragments}/4",
-                            NamedTextColor.DARK_GRAY
-                        )
-                    )
+                    when (event.fragment.finalColor) {
+                        PaletteColor.ORANGE -> {
+                            teamInventory.orangeFragments += 1
+
+                            if (teamInventory.orangeFragments == 3) {
+                                GlobalEventHandler.call(
+                                    PlayerCollectColorEvent(
+                                        this@JamGame, event.player, PaletteColor.ORANGE
+                                    )
+                                )
+                            }
+
+                            sidebar.updateLineContent(
+                                "fragment_orange",
+                                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text(
+                                    "${teamInventory.orangeFragments}/3",
+                                    NamedTextColor.DARK_GRAY
+                                )
+                            )
+                        }
+
+                        PaletteColor.BLUE -> {
+                            teamInventory.blueFragments += 1
+
+                            if (teamInventory.blueFragments == 3) {
+                                GlobalEventHandler.call(
+                                    PlayerCollectColorEvent(
+                                        this@JamGame, event.player, PaletteColor.BLUE
+                                    )
+                                )
+                            }
+
+                            sidebar.updateLineContent(
+                                "fragment_blue",
+                                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text(
+                                    "${teamInventory.blueFragments}/3",
+                                    NamedTextColor.DARK_GRAY
+                                )
+                            )
+                        }
+
+                        else -> throw IllegalStateException("Updated fragment must be orange or blue")
+                    }
+
                 }
+
+                eventNode.listen { }
 
                 delay(100000)
 

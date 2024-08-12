@@ -44,6 +44,8 @@ data class Fragments(
         eventNode.listen<PlayerEntityInteractEvent> { event ->
             val fragment = (event.target as? Fragment.Hitbox)?.fragment ?: return@listen
 
+            if (fragment.isRemoved) return@listen
+
             GlobalEventHandler.call(PlayerCollectFragmentEvent(game, event.player, fragment))
 
             fragment.remove()

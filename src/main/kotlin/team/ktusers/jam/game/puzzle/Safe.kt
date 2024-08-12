@@ -25,6 +25,7 @@ import net.minestom.server.inventory.InventoryType
 import net.minestom.server.item.Material
 import net.minestom.server.sound.SoundEvent
 import team.ktusers.jam.dsl.simpleGui
+import team.ktusers.jam.event.PlayerChangeColorEvent
 import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.game.JamGame
 import team.ktusers.jam.generated.PaletteColor
@@ -37,15 +38,33 @@ data class Safe(
     val color: PaletteColor
 ) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
-        val interaction = Entity(EntityType.INTERACTION)
-        interaction.editMeta<InteractionMeta> {
-            height = 1.2f
-            width = 1.2f
-            response = true
-            isHasNoGravity = true
-            this
-        }
+        val interaction = Interaction()
         interaction.setInstance(game.instance, pos.add(0.5, -0.1, 0.5))
+
+        interaction.updateViewableRule {
+            with(game) {
+                it.currentColor == color
+            }
+        }
+
+        val display = Display()
+        display.setInstance(game.instance, pos)
+
+        display.updateViewableRule {
+            with(game) {
+                it.currentColor == color
+            }
+        }
+
+        eventNode.listen<PlayerChangeColorEvent> { event ->
+            if (event.toColor == color) {
+                display.addViewer(event.player)
+                interaction.addViewer(event.player)
+                return@listen
+            }
+            display.removeViewer(event.player)
+            interaction.removeViewer(event.player)
+        }
 
         var isComplete = false
 
@@ -139,14 +158,28 @@ data class Safe(
             event.player.openInventory(gui)
         }
 
-        val display = Entity(EntityType.BLOCK_DISPLAY)
-        display.editMeta<BlockDisplayMeta> {
-            setBlockState(Block.COMMAND_BLOCK)
-            isHasGlowingEffect = true
-            isHasNoGravity = true
-            this
-        }
-        display.setInstance(game.instance, pos)
+    }
 
+    class Display : Entity(EntityType.BLOCK_DISPLAY) {
+        init {
+            editMeta<BlockDisplayMeta> {
+                setBlockState(Block.COMMAND_BLOCK)
+                isHasGlowingEffect = true
+                isHasNoGravity = true
+                this
+            }
+        }
+    }
+
+    class Interaction : Entity(EntityType.INTERACTION) {
+        init {
+            editMeta<InteractionMeta> {
+                height = 1.2f
+                width = 1.2f
+                response = true
+                isHasNoGravity = true
+                this
+            }
+        }
     }
 }

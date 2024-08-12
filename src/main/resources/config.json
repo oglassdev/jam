@@ -49,9 +49,65 @@
         "final_color": "BLUE",
         "fragments": [
           {
-            "color": "RED",
+            "color": "BLUE",
             "position": {
               "x": -5.5,
+              "y": -48.0,
+              "z": -1.5,
+              "yaw": 0,
+              "pitch": 0
+            }
+          },
+          {
+            "color": "INDIGO",
+            "position": {
+              "x": -5.5,
+              "y": -48.0,
+              "z": 0.5,
+              "yaw": 0,
+              "pitch": 0
+            }
+          },
+          {
+            "color": "VIOLET",
+            "position": {
+              "x": -5.5,
+              "y": -48.0,
+              "z": 1.5,
+              "yaw": 0,
+              "pitch": 0
+            }
+          }
+        ]
+      },
+      {
+        "type": "fragments",
+        "final_color": "ORANGE",
+        "fragments": [
+          {
+            "color": "RED",
+            "position": {
+              "x": -4.5,
+              "y": -48.0,
+              "z": -2.5,
+              "yaw": 0,
+              "pitch": 0
+            }
+          },
+          {
+            "color": "ORANGE",
+            "position": {
+              "x": -4.5,
+              "y": -48.0,
+              "z": -1.5,
+              "yaw": 0,
+              "pitch": 0
+            }
+          },
+          {
+            "color": "YELLOW",
+            "position": {
+              "x": -4.5,
               "y": -48.0,
               "z": 0.5,
               "yaw": 0,

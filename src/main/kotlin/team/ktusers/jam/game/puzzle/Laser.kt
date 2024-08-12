@@ -47,7 +47,7 @@ data class Lasers(val lasers: List<Laser.Config>) : Puzzle {
             if (event.player.position == event.player.previousPosition) return@listen
             lasers.filter { it.visible == color }.forEach { laser ->
                 if (laser.boundingBox.intersectEntity(laser.position, event.player)) {
-                    event.player.damage(Damage.fromEntity(laser, 0.1f))
+                    event.player.damage(Damage.fromEntity(laser, 0.25f))
                 }
             }
         }

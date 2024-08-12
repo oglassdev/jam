@@ -5,5 +5,7 @@ import team.ktusers.jam.generated.PaletteColor
 class TeamInventory {
     val colors: MutableSet<PaletteColor> = mutableSetOf()
 
-    var collectedFragments: Int = 0
+    var blueFragments: Int = 0
+    
+    var orangeFragments: Int = 0
 }
