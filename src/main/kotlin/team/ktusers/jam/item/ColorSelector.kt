@@ -7,26 +7,28 @@ import net.bladehunt.kotstom.dsl.item.item
 import net.bladehunt.kotstom.dsl.item.itemName
 import net.bladehunt.kotstom.extension.adventure.text
 import net.bladehunt.minigamelib.ext.game
-import net.kyori.adventure.text.format.TextColor
 import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
 import team.ktusers.jam.AdventureNbt
 import team.ktusers.jam.game.JamGame
-import team.ktusers.jam.game.getPaletteColorFromString
+import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.gui.colorSelector
 import java.util.*
 
 @Serializable
 @SerialName("color_selector")
 data class ColorSelector(
-    val selectedColor: String = "RED",
+    val selectedColor: PaletteColor,
     val uuid: @Contextual UUID = UUID.randomUUID()
 ) : JamItem {
-    override fun createItemStack(): ItemStack = item(Material.BREEZE_ROD) {
-        val thisColor = getPaletteColorFromString("RED")
-        itemName = text("Color: $selectedColor", TextColor.color(thisColor.red, thisColor.green, thisColor.blue))
+    override fun createItemStack(): ItemStack = item(Material.NETHER_STAR) {
+        itemName =
+            text(
+                "Color: ${selectedColor.name.capitalize()}",
+                selectedColor.textColor
+            )
 
         this[ItemTag] = AdventureNbt.encodeToCompound<JamItem>(this@ColorSelector)
     }

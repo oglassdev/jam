@@ -4,10 +4,12 @@ import com.github.ajalt.colormath.calculate.differenceCIE2000
 import com.github.ajalt.colormath.model.RGB
 import com.sksamuel.scrimage.ImmutableImage
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+import net.kyori.adventure.text.format.TextColor
 import net.minestom.server.instance.block.Block
 import net.minestom.server.utils.NamespaceID
 import java.awt.Color
@@ -16,8 +18,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import kotlin.math.abs
-import kotlin.reflect.javaType
-import kotlin.reflect.typeOf
 
 val JsonSerializer = Json {
     ignoreUnknownKeys = true
@@ -123,6 +123,7 @@ suspend fun main() {
 
     dispatcher.close()
 
+    val paletteColorName = ClassName("team.ktusers.jam.generated", "PaletteColor")
     val file = FileSpec.builder(className)
         .addFileComment("GENERATED!!! DO NOT EDIT")
         .addType(
@@ -130,7 +131,10 @@ suspend fun main() {
                 .addProperty(
                     PropertySpec.builder(
                         "colors",
-                        typeOf<HashMap<NamespaceID, Color>>().javaType
+                        HashMap::class.asClassName().parameterizedBy(
+                            ClassName("net.minestom.server.utils", NamespaceID::class.simpleName!!),
+                            paletteColorName
+                        )
                     )
                         .addModifiers(KModifier.PRIVATE)
                         .initializer(
@@ -149,24 +153,22 @@ suspend fun main() {
                     .build())
                 .addFunction(
                     FunSpec.builder("getColor")
-                        .returns(Color::class)
-                        .addModifiers(KModifier.PRIVATE)
+                        .returns(paletteColorName)
                         .addParameter(
                             ParameterSpec.builder("namespace", NamespaceID::class)
                                 .build()
                         )
-                        .addStatement("return this.colors.get(namespace) ?: Palette.GREY")
+                        .addStatement("return this.colors.get(namespace) ?: PaletteColor.GREY")
                         .build()
                 )
                 .addFunction(
                     FunSpec.builder("getColor")
-                        .returns(Color::class)
-                        .addModifiers(KModifier.PRIVATE)
+                        .returns(paletteColorName)
                         .addParameter(
                             ParameterSpec.builder("block", Block::class)
                                 .build()
                         )
-                        .addStatement("return this.colors.get(block.namespace()) ?: Palette.GREY")
+                        .addStatement("return this.colors.get(block.namespace()) ?: PaletteColor.GREY")
                         .build()
                 )
                 .addFunction(
@@ -177,7 +179,7 @@ suspend fun main() {
                                 .build()
                         )
                         .addParameter(
-                            ParameterSpec.builder("color", Color::class)
+                            ParameterSpec.builder("color", paletteColorName)
                                 .build()
                         )
                         .addStatement("this.colors.put(block.namespace(), color)")
@@ -189,71 +191,113 @@ suspend fun main() {
 
     file.writeTo(File("./src/generated/kotlin"))
 
-    val paletteFile = FileSpec.builder(ClassName("team.ktusers.jam.generated", "Palette"))
+    val paletteFile = FileSpec.builder(paletteColorName)
         .addFileComment("GENERATED!!! DO NOT EDIT")
         .addType(
-            TypeSpec.objectBuilder("Palette")
-                .addProperty(
-                    PropertySpec.builder("RED", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.RED.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
+            TypeSpec.enumBuilder(paletteColorName.simpleName)
+                .primaryConstructor(
+                    FunSpec.constructorBuilder()
+                        .addParameter("color", Color::class)
+                        .addParameter("textColor", TextColor::class)
+                        .build()
+                )
+                .addType(
+                    TypeSpec.companionObjectBuilder()
+                        .addFunction(
+                            FunSpec.builder("fromColor")
+                                .addParameter("color", Color::class)
+                                .returns(ClassName("team.ktusers.jam.generated", "PaletteColor").copy(nullable = true))
+                                .addStatement("return entries.firstOrNull { it.color == color }")
+                                .build()
                         )
                         .build()
                 )
-                .addProperty(
-                    PropertySpec.builder("ORANGE", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.ORANGE.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
-                        )
+                .addFunction(
+                    FunSpec.constructorBuilder()
+                        .addParameter("colorInt", Int::class)
+                        .addModifiers(KModifier.PRIVATE)
+                        .callThisConstructor("Color(colorInt)", "TextColor.color(colorInt)")
                         .build()
                 )
                 .addProperty(
-                    PropertySpec.builder("YELLOW", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.YELLOW.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
-                        )
+                    PropertySpec.builder("color", Color::class)
+                        .initializer("color")
                         .build()
                 )
                 .addProperty(
-                    PropertySpec.builder("GREEN", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.GREEN.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
+                    PropertySpec.builder("textColor", TextColor::class)
+                        .initializer("textColor")
+                        .build()
+                )
+                .addEnumConstant(
+                    "RED",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.RED.toSRGB().toHex(withNumberSign = false)
                         )
                         .build()
                 )
-                .addProperty(
-                    PropertySpec.builder("BLUE", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.BLUE.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
+                .addEnumConstant(
+                    "ORANGE",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.ORANGE.toSRGB().toHex(withNumberSign = false)
                         )
                         .build()
                 )
-                .addProperty(
-                    PropertySpec.builder("INDIGO", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.INDIGO.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
+                .addEnumConstant(
+                    "YELLOW",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.YELLOW.toSRGB().toHex(withNumberSign = false)
                         )
                         .build()
                 )
-                .addProperty(
-                    PropertySpec.builder("VIOLET", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.VIOLET.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
+                .addEnumConstant(
+                    "GREEN",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.GREEN.toSRGB().toHex(withNumberSign = false)
                         )
                         .build()
                 )
-                .addProperty(
-                    PropertySpec.builder("GREY", Color::class)
-                        .initializer(
-                            CodeBlock.of(
-                                Palette.GREY.toSRGB().let { "Color(${it.redInt}, ${it.greenInt}, ${it.blueInt})" })
+                .addEnumConstant(
+                    "BLUE",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.BLUE.toSRGB().toHex(withNumberSign = false)
+                        )
+                        .build()
+                )
+                .addEnumConstant(
+                    "INDIGO",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.INDIGO.toSRGB().toHex(withNumberSign = false)
+                        )
+                        .build()
+                )
+                .addEnumConstant(
+                    "VIOLET",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.VIOLET.toSRGB().toHex(withNumberSign = false)
+                        )
+                        .build()
+                )
+                .addEnumConstant(
+                    "GREY",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.GREY.toSRGB().toHex(withNumberSign = false)
                         )
                         .build()
                 )
@@ -266,17 +310,17 @@ suspend fun main() {
 
 fun findClosestPaletteColor(input: RGB): String {
     val hsl = input.toHSL()
-    if (abs(hsl.s) < 0.05) return "Palette.GREY"
+    if (abs(hsl.s) < 0.05) return "PaletteColor.GREY"
 
 
     return buildMap {
-        put("Palette.RED", Palette.RED.differenceCIE2000(hsl))
-        put("Palette.ORANGE", Palette.ORANGE.differenceCIE2000(hsl))
-        put("Palette.YELLOW", Palette.YELLOW.differenceCIE2000(hsl))
-        put("Palette.GREEN", Palette.GREEN.differenceCIE2000(hsl))
-        put("Palette.BLUE", Palette.BLUE.differenceCIE2000(hsl))
-        put("Palette.INDIGO", Palette.INDIGO.differenceCIE2000(hsl))
-        put("Palette.VIOLET", Palette.VIOLET.differenceCIE2000(hsl))
-        put("Palette.GREY", Palette.GREY.differenceCIE2000(hsl))
+        put("PaletteColor.RED", Palette.RED.differenceCIE2000(hsl))
+        put("PaletteColor.ORANGE", Palette.ORANGE.differenceCIE2000(hsl))
+        put("PaletteColor.YELLOW", Palette.YELLOW.differenceCIE2000(hsl))
+        put("PaletteColor.GREEN", Palette.GREEN.differenceCIE2000(hsl))
+        put("PaletteColor.BLUE", Palette.BLUE.differenceCIE2000(hsl))
+        put("PaletteColor.INDIGO", Palette.INDIGO.differenceCIE2000(hsl))
+        put("PaletteColor.VIOLET", Palette.VIOLET.differenceCIE2000(hsl))
+        put("PaletteColor.GREY", Palette.GREY.differenceCIE2000(hsl))
     }.minBy { it.value }.key
 }
