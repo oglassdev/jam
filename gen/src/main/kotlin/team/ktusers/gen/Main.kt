@@ -1,6 +1,10 @@
 package team.ktusers.gen
 
 import com.github.ajalt.colormath.calculate.differenceCIE2000
+import com.github.ajalt.colormath.calculate.differenceCIE76
+import com.github.ajalt.colormath.model.HSL
+import com.github.ajalt.colormath.model.Oklab
+import com.github.ajalt.colormath.model.Oklch
 import com.github.ajalt.colormath.model.RGB
 import com.sksamuel.scrimage.ImmutableImage
 import com.squareup.kotlinpoet.*
@@ -18,6 +22,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import kotlin.math.abs
+import kotlin.math.floor
 
 val JsonSerializer = Json {
     ignoreUnknownKeys = true
@@ -89,22 +94,37 @@ suspend fun main() {
                 if (textureName.contains("minecraft:item")) return@launch
                 val texture = "./generated/input/textures/$textureName.png"
 
-                var color: RGB? = null
+                var color: Oklab? = null
                 try {
                     val loaded = imageLoader.fromFile(File(texture)).pixels()
                         .mapNotNull { pixel ->
                             pixel.takeIf { pixel.alpha() > 10 }?.let { px ->
-                                RGB(
-                                    (px.red().floorDiv(16) / 16.0).toFloat(),
-                                    (px.green().floorDiv(16) / 16.0).toFloat(),
-                                    (px.blue().floorDiv(16) / 16.0).toFloat()
+                                val r = px.red().floorDiv(16) / 16.0
+                                val g = px.green().floorDiv(16) / 16.0
+                                val b = px.blue().floorDiv(16) / 16.0
+
+                                val rgb = RGB(
+                                    r ,
+                                    g,
+                                    b
                                 )
+
+                                rgb.toOklab()
                             }
                         }
-                        .groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
 
-                    println(loaded?.let { color -> "${file.name} ${color.redInt}, ${color.greenInt}, ${color.blueInt}" })
-                    if (loaded != null) color = loaded
+                    val combinedWeightCounts = loaded.groupingBy { it }
+                        .eachCount()
+                        .map { Pair(it.key, (1.0 - (1.0 / it.value)) + it.key.l) }
+
+
+                    val col: Oklab? = combinedWeightCounts.maxByOrNull { it.second }?.first
+
+                    println(col?.let { lab ->
+                        "${file.name} ${lab.l}, ${lab.a}, ${lab.b}"
+                    })
+
+                    col?.let { color = it }
                 } catch (e: Exception) {
                     e.printStackTrace()
                     return@launch
@@ -115,7 +135,7 @@ suspend fun main() {
                 statements.add(
                     "this.register(Block.${
                         block.namespace().path().uppercase()
-                    }, ${findClosestPaletteColor(color)})"
+                    }, ${findClosestPaletteColor(color!!)})"
                 )
             }
         } ?: throw IllegalStateException("No blockstates were found")
@@ -195,6 +215,7 @@ suspend fun main() {
         .addFileComment("GENERATED!!! DO NOT EDIT")
         .addType(
             TypeSpec.enumBuilder(paletteColorName.simpleName)
+                .addAnnotation(ClassName("kotlinx.serialization", "Serializable"))
                 .primaryConstructor(
                     FunSpec.constructorBuilder()
                         .addParameter("color", Color::class)
@@ -301,6 +322,24 @@ suspend fun main() {
                         )
                         .build()
                 )
+                .addEnumConstant(
+                    "BLACK",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + Palette.BLACK.toSRGB().toHex(withNumberSign = false)
+                        )
+                        .build()
+                )
+                .addEnumConstant(
+                    "NONE",
+                    TypeSpec.anonymousClassBuilder()
+                        .addSuperclassConstructorParameter(
+                            "%L",
+                            "0x" + RGB(0, 0, 0).toHex(withNumberSign = false)
+                        )
+                        .build()
+                )
                 .build()
         )
         .build()
@@ -308,19 +347,19 @@ suspend fun main() {
     paletteFile.writeTo(File("./src/generated/kotlin"))
 }
 
-fun findClosestPaletteColor(input: RGB): String {
-    val hsl = input.toHSL()
-    if (abs(hsl.s) < 0.05) return "PaletteColor.GREY"
-
-
+fun findClosestPaletteColor(lab: Oklab): String {
     return buildMap {
-        put("PaletteColor.RED", Palette.RED.differenceCIE2000(hsl))
-        put("PaletteColor.ORANGE", Palette.ORANGE.differenceCIE2000(hsl))
-        put("PaletteColor.YELLOW", Palette.YELLOW.differenceCIE2000(hsl))
-        put("PaletteColor.GREEN", Palette.GREEN.differenceCIE2000(hsl))
-        put("PaletteColor.BLUE", Palette.BLUE.differenceCIE2000(hsl))
-        put("PaletteColor.INDIGO", Palette.INDIGO.differenceCIE2000(hsl))
-        put("PaletteColor.VIOLET", Palette.VIOLET.differenceCIE2000(hsl))
-        put("PaletteColor.GREY", Palette.GREY.differenceCIE2000(hsl))
+        put("PaletteColor.RED", Palette.RED.differenceCIE2000(lab))
+        put("PaletteColor.ORANGE", Palette.ORANGE.differenceCIE2000(lab))
+        put("PaletteColor.YELLOW", Palette.YELLOW.differenceCIE2000(lab))
+        put("PaletteColor.GREEN", Palette.GREEN.differenceCIE2000(lab))
+        put("PaletteColor.BLUE", Palette.BLUE.differenceCIE2000(lab))
+        put("PaletteColor.INDIGO", Palette.INDIGO.differenceCIE2000(lab))
+        put("PaletteColor.VIOLET", Palette.VIOLET.differenceCIE2000(lab))
+        put("PaletteColor.GREY", Palette.GREY.differenceCIE2000(lab))
+    }.also {
+        it.forEach { (color, diff) ->
+            println("$color: $diff")
+        }
     }.minBy { it.value }.key
 }
