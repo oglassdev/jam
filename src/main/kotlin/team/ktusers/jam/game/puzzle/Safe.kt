@@ -31,8 +31,11 @@ import team.ktusers.jam.generated.PaletteColor
 import kotlin.random.Random
 
 @Serializable
-@SerialName("select")
-data class Safe(val pos: @Contextual BlockVec) : Puzzle {
+@SerialName("safe")
+data class Safe(
+    val pos: @Contextual BlockVec,
+    val color: PaletteColor
+) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
         val interaction = Entity(EntityType.INTERACTION)
         interaction.editMeta<InteractionMeta> {
@@ -64,11 +67,11 @@ data class Safe(val pos: @Contextual BlockVec) : Puzzle {
                 }
             }
             val clicked = Array(4) { -1 }
-            val gui = simpleGui(InventoryType.CRAFTER_3X3, text("Combination Safe", NamedTextColor.DARK_GRAY)) {
+            val gui = simpleGui(InventoryType.CRAFTING, text("Combination Safe", NamedTextColor.DARK_GRAY)) {
                 repeat(9) { i ->
                     set(
-                        i,
-                        item(if (!random.contains(i)) Material.GRAY_STAINED_GLASS_PANE else Material.BLACK_STAINED_GLASS_PANE) {
+                        i + 1,
+                        item(if (!random.contains(i)) Material.LIGHT_GRAY_STAINED_GLASS_PANE else Material.BLACK_STAINED_GLASS_PANE) {
                             itemName = text("${i + 1}")
                             amount = i + 1
                         }) { clickEvent ->
@@ -97,7 +100,7 @@ data class Safe(val pos: @Contextual BlockVec) : Puzzle {
                                 clickEvent.player.closeInventory()
 
                                 isComplete = true
-                                GlobalEventHandler.call(PlayerCollectColorEvent(game, event.player, PaletteColor.GREY))
+                                GlobalEventHandler.call(PlayerCollectColorEvent(game, event.player, color))
                                 return@set
                             }
                             clickEvent.player.playSound(
@@ -115,6 +118,23 @@ data class Safe(val pos: @Contextual BlockVec) : Puzzle {
 
                     }
                 }
+                set(
+                    0, item(
+                        when (color) {
+                            PaletteColor.RED -> Material.RED_STAINED_GLASS
+                            PaletteColor.ORANGE -> Material.ORANGE_STAINED_GLASS
+                            PaletteColor.YELLOW -> Material.YELLOW_STAINED_GLASS
+                            PaletteColor.GREEN -> Material.GREEN_STAINED_GLASS
+                            PaletteColor.BLUE -> Material.BLUE_STAINED_GLASS
+                            PaletteColor.INDIGO -> Material.PURPLE_STAINED_GLASS
+                            PaletteColor.VIOLET -> Material.MAGENTA_STAINED_GLASS
+                            PaletteColor.GREY -> Material.GRAY_STAINED_GLASS
+                            else -> throw IllegalArgumentException("Cannot use black or none")
+                        }
+                    ) {
+                        itemName = text(color.name.lowercase().capitalize(), color.textColor)
+                    }
+                )
             }
             event.player.openInventory(gui)
         }

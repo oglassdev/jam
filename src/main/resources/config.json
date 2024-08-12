@@ -36,7 +36,8 @@
         }
       },
       {
-        "type": "select",
+        "type": "safe",
+        "color": "RED",
         "pos": {
           "x": -8,
           "y": -46,

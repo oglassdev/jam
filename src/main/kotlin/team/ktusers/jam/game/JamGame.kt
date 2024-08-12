@@ -168,16 +168,8 @@ class JamGame : InstancedGame(
     val sidebar: Sidebar = Sidebar(text("cured", TextDecoration.BOLD, color = NamedTextColor.DARK_PURPLE)).apply {
         createLine(
             Sidebar.ScoreboardLine(
-                "blank_0",
-                empty(),
-                0,
-                Sidebar.NumberFormat.blank()
-            )
-        )
-        createLine(
-            Sidebar.ScoreboardLine(
                 "timer",
-                text("Time Remaining: 9:00", NamedTextColor.YELLOW),
+                text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text("09:00"),
                 -1,
                 Sidebar.NumberFormat.blank()
             )
@@ -193,7 +185,7 @@ class JamGame : InstancedGame(
         createLine(
             Sidebar.ScoreboardLine(
                 "inv_name",
-                text("Team Inventory", NamedTextColor.YELLOW),
+                text("Team", NamedTextColor.LIGHT_PURPLE),
                 -3,
                 Sidebar.NumberFormat.blank()
             )
@@ -201,14 +193,43 @@ class JamGame : InstancedGame(
         createLine(
             Sidebar.ScoreboardLine(
                 "colors",
-                text("Colors: 0/8", NamedTextColor.GRAY), -4,
+                text(" ᴄᴏʟᴏʀꜱ: ", NamedTextColor.RED) + text("0/8", NamedTextColor.GRAY), -4,
                 Sidebar.NumberFormat.blank()
             )
         )
         createLine(
             Sidebar.ScoreboardLine(
-                "fragments",
-                text("Blue Fragments: 0/${5}", NamedTextColor.GRAY), -5,
+                "deaths",
+                text(" ᴅᴇᴀᴛʜꜱ: ", NamedTextColor.RED) + text("0", NamedTextColor.GRAY), -5,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "blank_2",
+                empty(),
+                -6,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "Fragments",
+                text("Fragments", NamedTextColor.LIGHT_PURPLE), -7,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "fragment_blue",
+                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text("0/4", NamedTextColor.DARK_GRAY), -8,
+                Sidebar.NumberFormat.blank()
+            )
+        )
+        createLine(
+            Sidebar.ScoreboardLine(
+                "fragment_orange",
+                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text("0/4", NamedTextColor.DARK_GRAY), -9,
                 Sidebar.NumberFormat.blank()
             )
         )
@@ -300,14 +321,12 @@ class JamGame : InstancedGame(
                         val elapsed = duration - (System.currentTimeMillis() - start).milliseconds
                         sidebar.updateLineContent(
                             "timer",
-                            text(
-                                "Time Remaining: ${
-                                    String.format(
-                                        "%02d:%02d",
-                                        elapsed.inWholeMinutes,
-                                        elapsed.inWholeSeconds % 60
-                                    )
-                                }", NamedTextColor.YELLOW
+                            text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text(
+                                String.format(
+                                    "%02d:%02d",
+                                    elapsed.inWholeMinutes,
+                                    elapsed.inWholeSeconds % 60
+                                ), NamedTextColor.GRAY
                             )
                         )
                         delay(1000)
@@ -388,7 +407,7 @@ class JamGame : InstancedGame(
                     bossbar.progress(teamInventory.colors.size / 8f)
                     sidebar.updateLineContent(
                         "colors",
-                        text("Colors: ${teamInventory.colors.size}/8", NamedTextColor.GRAY)
+                        text(" ᴄᴏʟᴏʀꜱ: ", NamedTextColor.RED) + text("0/8", NamedTextColor.GRAY)
                     )
 
                     sendMessage(
@@ -434,8 +453,11 @@ class JamGame : InstancedGame(
 
                     teamInventory.collectedFragments += 1
                     sidebar.updateLineContent(
-                        "fragments",
-                        text("Blue Fragments: ${teamInventory.collectedFragments}/5", NamedTextColor.GRAY)
+                        "fragment_blue",
+                        text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text(
+                            "${teamInventory.collectedFragments}/4",
+                            NamedTextColor.DARK_GRAY
+                        )
                     )
                 }
 
