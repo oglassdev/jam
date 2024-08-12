@@ -12,6 +12,7 @@ import net.bladehunt.blade.ext.logger
 import net.bladehunt.kotstom.DimensionTypeRegistry
 import net.bladehunt.kotstom.InstanceManager
 import net.bladehunt.kotstom.dsl.listen
+import net.bladehunt.kotstom.dsl.particle
 import net.bladehunt.kotstom.extension.adventure.plus
 import net.bladehunt.kotstom.extension.adventure.text
 import net.bladehunt.minigamelib.InstancedGame
@@ -33,15 +34,14 @@ import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
-import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.network.packet.server.play.BlockChangePacket
+import net.minestom.server.particle.Particle
 import net.minestom.server.sound.SoundEvent
 import net.minestom.server.utils.NamespaceID
 import net.minestom.server.world.DimensionType
 import team.ktusers.jam.Config
 import team.ktusers.jam.Lobby
-import team.ktusers.jam.config.JamConfig
 import team.ktusers.jam.cutscene.Cutscene
 import team.ktusers.jam.cutscene.CutscenePosition
 import team.ktusers.jam.cutscene.CutsceneText
@@ -51,7 +51,6 @@ import team.ktusers.jam.generated.BlockColor
 import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.item.ColorSelector
 import team.ktusers.jam.item.getCustomItemData
-import team.ktusers.jam.util.PlayerNpc
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -69,23 +68,6 @@ class JamGame : InstancedGame(
         }
     }
 ) {
-    init {
-        Config.game.puzzles.forEach { puzzle ->
-            when (puzzle) {
-                is JamConfig.Entrance -> {
-                    val npc = PlayerNpc("_npc_entr")
-                    npc.setInstance(instance, puzzle.pos).thenAccept {
-                        npc.lookAt(Config.game.spawnPos)
-                    }
-                }
-
-                is JamConfig.Select -> {
-                    instance.setBlock(puzzle.pos, Block.COMMAND_BLOCK)
-                }
-            }
-        }
-    }
-
     companion object {
         private val logger = logger<JamGame>()
 
@@ -228,7 +210,7 @@ class JamGame : InstancedGame(
                     .build()
             )
         }
-        +element {
+        element {
             val origin = Config.game.spawnPos.withY { it + 2.0 }
             val cutscene = Cutscene(
                 instance, true, listOf(
@@ -252,6 +234,8 @@ class JamGame : InstancedGame(
         +element {
             withTimeoutOrNull(9.minutes) {
                 val eventNode = createElementInstanceEventNode()
+
+                Config.game.puzzles.forEach { it.onElementStart(this@JamGame, eventNode) }
 
                 players.forEach {
                     it.inventory.setItemStack(8, ColorSelector(it.currentColor).createItemStack())
@@ -292,6 +276,13 @@ class JamGame : InstancedGame(
                             }
                         )
                     }
+                    event.player.sendPacket(
+                        particle {
+                            particle = Particle.EXPLOSION_EMITTER
+                            count = 2
+                            position = event.player.position.add(0.0, event.player.eyeHeight - 0.5, 0.0)
+                        }
+                    )
                     val points = POINT_COLORS[toColor] ?: return@listen
                     event.player.sendPackets(
                         points.map {
@@ -308,6 +299,31 @@ class JamGame : InstancedGame(
                     }
                     batch.apply(instance, null)
                     teamInventory.collectPaletteColor(event.color)
+
+                    sendMessage(
+                        text("+ ", NamedTextColor.GREEN) + text(
+                            event.color.name.lowercase().capitalize(),
+                            event.color.textColor
+                        )
+                    )
+
+                    players.forEach {
+                        it.sendPacket(
+                            particle {
+                                particle = Particle.EXPLOSION_EMITTER
+                                count = 2
+                                position = it.position.add(0.0, it.eyeHeight - 0.5, 0.0)
+                            }
+                        )
+                    }
+
+                    playSound(
+                        Sound.sound()
+                            .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
+                            .volume(0.6f)
+                            .pitch(0.8f)
+                            .build()
+                    )
                 }
 
                 delay(100000)
