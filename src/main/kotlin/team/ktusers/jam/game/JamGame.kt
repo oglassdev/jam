@@ -34,6 +34,7 @@ import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
+import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.network.packet.server.play.BlockChangePacket
 import net.minestom.server.particle.Particle
@@ -105,18 +106,22 @@ class JamGame : InstancedGame(
                                     val current = chunk.getBlock(x, y, z)
                                     if (current.isAir) continue
                                     val block = current.namespace().path()
-                                    val newBlock =
-                                        if (block.contains("stairs", ignoreCase = true)) JamBlock.BLACK_STAIRS.withNbt(
+                                    var newBlock: Block = when {
+                                        block.contains("stairs", ignoreCase = true) -> JamBlock.BLACK_STAIRS
+                                        block.contains("slab", ignoreCase = true) -> JamBlock.BLACK_SLAB
+                                        block.contains("wall", ignoreCase = true) -> JamBlock.BLACK_WALL
+                                        block.contains("fence", ignoreCase = true) -> JamBlock.BLACK_FENCE
+                                        block.contains("carpet", ignoreCase = true) -> JamBlock.BLACK_CARPET
+                                        block.contains("button", ignoreCase = true) -> JamBlock.BLACK_BUTTON
+                                        else -> if (!current.properties()
+                                                .contains("waterlogged")
+                                        ) JamBlock.BLACK else continue
+                                    }
+                                    if (newBlock != JamBlock.BLACK) {
+                                        newBlock = newBlock.withNbt(
                                             current.nbt()
                                         ).withProperties(current.properties())
-                                        else if (block.contains("slab", ignoreCase = true)) JamBlock.BLACK_SLAB.withNbt(
-                                            current.nbt()
-                                        ).withProperties(current.properties())
-                                        else if (block.contains("wall", ignoreCase = true)) JamBlock.BLACK_WALL.withNbt(
-                                            current.nbt()
-                                        ).withProperties(current.properties())
-                                        else if (!current.properties().contains("waterlogged")) JamBlock.BLACK
-                                        else continue
+                                    }
 
                                     val point = BlockVec(
                                         x + chunk.chunkX * 16,
