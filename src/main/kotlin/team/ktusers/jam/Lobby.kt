@@ -6,7 +6,6 @@ import net.bladehunt.kotstom.dsl.item.itemName
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.extension.adventure.plus
 import net.bladehunt.kotstom.extension.adventure.text
-import net.kyori.adventure.text.Component.empty
 import net.kyori.adventure.text.Component.newline
 import net.kyori.adventure.text.format.NamedTextColor.*
 import net.kyori.adventure.text.format.TextDecoration
@@ -67,7 +66,6 @@ val Lobby = buildInstance {
         val player = event.entity as? Player ?: return@listen
 
         player.inventory.clear()
-        player.sendPlayerListHeaderAndFooter(empty(), empty())
     }
 
     eventNode.listen<EntityDamageEvent> { event ->

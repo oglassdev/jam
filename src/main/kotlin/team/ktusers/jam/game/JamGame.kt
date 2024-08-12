@@ -33,10 +33,9 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.title.Title
 import net.minestom.server.coordinate.BlockVec
+import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
-import net.minestom.server.event.player.PlayerBlockInteractEvent
-import net.minestom.server.event.player.PlayerSpawnEvent
-import net.minestom.server.event.player.PlayerUseItemEvent
+import net.minestom.server.event.player.*
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
@@ -71,7 +70,14 @@ class JamGame : InstancedGame(
         InstanceManager.registerInstance(instance)
 
         instance.eventNode().listen<PlayerSpawnEvent> {
-            it.entity.teleport(Config.game.spawnPos)
+            it.player.teleport(Config.game.spawnPos)
+            it.player.gameMode = GameMode.ADVENTURE
+        }
+        instance.eventNode().listen<PlayerBlockBreakEvent> { event ->
+            event.isCancelled = true
+        }
+        instance.eventNode().listen<PlayerBlockPlaceEvent> { event ->
+            event.isCancelled = true
         }
     }
 ) {
@@ -408,7 +414,10 @@ class JamGame : InstancedGame(
                     bossbar.progress(teamInventory.colors.size / 8f)
                     sidebar.updateLineContent(
                         "colors",
-                        text(" ᴄᴏʟᴏʀꜱ: ", NamedTextColor.RED) + text("0/8", NamedTextColor.GRAY)
+                        text(" ᴄᴏʟᴏʀꜱ: ", NamedTextColor.RED) + text(
+                            "${teamInventory.colors.size}/8",
+                            NamedTextColor.GRAY
+                        )
                     )
 
                     sendMessage(
