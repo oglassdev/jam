@@ -22,6 +22,8 @@ import net.bladehunt.minigamelib.descriptor.GameDescriptor
 import net.bladehunt.minigamelib.dsl.element
 import net.bladehunt.minigamelib.dsl.gameDescriptor
 import net.bladehunt.minigamelib.element.countdown
+import net.bladehunt.minigamelib.event.game.PlayerJoinGameEvent
+import net.bladehunt.minigamelib.event.game.PlayerLeaveGameEvent
 import net.bladehunt.minigamelib.util.createElementInstanceEventNode
 import net.bladehunt.minigamelib.util.store
 import net.kyori.adventure.bossbar.BossBar
@@ -35,6 +37,9 @@ import net.kyori.adventure.title.Title
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
+import net.minestom.server.entity.damage.Damage
+import net.minestom.server.entity.damage.DamageType
+import net.minestom.server.event.entity.EntityDamageEvent
 import net.minestom.server.event.player.*
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
 import net.minestom.server.instance.block.Block
@@ -78,6 +83,11 @@ class JamGame : InstancedGame(
         }
         instance.eventNode().listen<PlayerBlockPlaceEvent> { event ->
             event.isCancelled = true
+        }
+        instance.eventNode().listen<PlayerTickEvent> { event ->
+            if (event.player.position.y > -64) return@listen
+
+            event.player.damage(Damage.fromPosition(DamageType.OUT_OF_WORLD, event.player.position, 100f))
         }
     }
 ) {
@@ -246,14 +256,58 @@ class JamGame : InstancedGame(
 
     var Player.currentColor: PaletteColor by store { PaletteColor.NONE }
 
+    var Player.deaths: Int by store { 0 }
+
     private val _timeElapsed = MutableStateFlow(0)
     val timeElapsed get() = _timeElapsed.asStateFlow()
 
     val teamInventory = TeamInventory()
 
+    init {
+        instance.eventNode().listen<PlayerChunkLoadEvent> { event ->
+            val points = POINT_COLORS[event.player.currentColor] ?: return@listen
+            event.player.sendPackets(
+                points.mapNotNull {
+                    if (it.chunkX() == event.chunkX && it.chunkZ() == event.chunkZ) BlockChangePacket(
+                        it,
+                        REFERENCE.getBlock(it)
+                    )
+                    else null
+                }
+            )
+        }
+    }
+
     override val descriptor: GameDescriptor = gameDescriptor {
         +element {
-            countdown(1, 5, 5, onCountdown = { value ->
+            val eventNode = createElementInstanceEventNode()
+
+            showBossBar(bossbar)
+            players.forEach {
+                sidebar.addViewer(it)
+            }
+
+            this@JamGame.eventNode().listen<PlayerJoinGameEvent> {
+                it.player.showBossBar(bossbar)
+                sidebar.addViewer(it.player)
+            }
+
+            this@JamGame.eventNode().listen<PlayerLeaveGameEvent> {
+                it.player.hideBossBar(bossbar)
+                sidebar.removeViewer(it.player)
+            }
+
+            eventNode.listen<EntityDamageEvent> { event ->
+                val player = event.entity as? Player ?: return@listen
+
+                event.isCancelled = true
+
+                if (event.damage.type == DamageType.OUT_OF_WORLD) {
+                    player.teleport(Config.game.spawnPos)
+                }
+            }
+
+            countdown(3, 5, 5, onCountdown = { value ->
                 when (value) {
                     in 0..5 -> {
                         showTitle(
@@ -341,10 +395,6 @@ class JamGame : InstancedGame(
                 }
                 val eventNode = createElementInstanceEventNode()
 
-                showBossBar(bossbar)
-                players.forEach {
-                    sidebar.addViewer(it)
-                }
                 Config.game.puzzles.forEach { it.onElementStart(this@JamGame, eventNode) }
 
                 players.forEach {
@@ -399,6 +449,28 @@ class JamGame : InstancedGame(
                         points.map {
                             BlockChangePacket(it, REFERENCE.getBlock(it))
                         }
+                    )
+                }
+
+                eventNode.listen<EntityDamageEvent> { event ->
+                    val player = event.entity as? Player ?: return@listen
+
+                    if (player.health - event.damage.amount > 0.0) return@listen
+                    event.isCancelled = true
+
+                    player.showTitle(
+                        Title.title(text("You Died", NamedTextColor.RED), empty(), TIMES)
+                    )
+                    player.heal()
+                    player.teleport(Config.game.spawnPos)
+                    sendMessage(player.name + text(" died!", NamedTextColor.RED))
+                    player.deaths++
+                    sidebar.updateLineContent(
+                        "deaths",
+                        text(" ᴅᴇᴀᴛʜꜱ: ", NamedTextColor.RED) + text(
+                            players.sumOf { it.deaths }.toString(),
+                            NamedTextColor.GRAY
+                        )
                     )
                 }
 

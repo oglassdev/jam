@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.extension.editMeta
 import net.minestom.server.collision.BoundingBox
+import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.EntityType
@@ -21,7 +22,12 @@ import team.ktusers.jam.generated.PaletteColor
 
 @Serializable
 @SerialName("lasers")
-data class Lasers(val lasers: List<Laser.Config>) : Puzzle {
+data class Lasers(
+    val lasers: List<Laser.Config>,
+    val objective: PaletteColor,
+    @SerialName("objective_position")
+    val objectivePosition: @Contextual Pos
+) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
         val lasers = lasers.map {
             val laser = Laser(it.visible, it.sizeX, it.rotation)

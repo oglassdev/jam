@@ -7,28 +7,24 @@ import net.bladehunt.kotstom.GlobalEventHandler
 import net.bladehunt.kotstom.dsl.item.amount
 import net.bladehunt.kotstom.dsl.item.item
 import net.bladehunt.kotstom.dsl.item.itemName
+import net.bladehunt.kotstom.dsl.item.lore
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.extension.adventure.text
-import net.bladehunt.kotstom.extension.editMeta
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.coordinate.BlockVec
-import net.minestom.server.entity.Entity
-import net.minestom.server.entity.EntityType
-import net.minestom.server.entity.metadata.display.BlockDisplayMeta
-import net.minestom.server.entity.metadata.other.InteractionMeta
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.trait.InstanceEvent
-import net.minestom.server.instance.block.Block
 import net.minestom.server.inventory.InventoryType
 import net.minestom.server.item.Material
 import net.minestom.server.sound.SoundEvent
 import team.ktusers.jam.dsl.simpleGui
-import team.ktusers.jam.event.PlayerChangeColorEvent
 import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.game.JamGame
 import team.ktusers.jam.generated.PaletteColor
+import team.ktusers.jam.util.FakeBlock
 import kotlin.random.Random
 
 @Serializable
@@ -38,38 +34,13 @@ data class Safe(
     val color: PaletteColor
 ) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
-        val interaction = Interaction()
-        interaction.setInstance(game.instance, pos.add(0.5, -0.1, 0.5))
-
-        interaction.updateViewableRule {
-            with(game) {
-                it.currentColor == color
-            }
-        }
-
-        val display = Display()
-        display.setInstance(game.instance, pos)
-
-        display.updateViewableRule {
-            with(game) {
-                it.currentColor == color
-            }
-        }
-
-        eventNode.listen<PlayerChangeColorEvent> { event ->
-            if (event.toColor == color) {
-                display.addViewer(event.player)
-                interaction.addViewer(event.player)
-                return@listen
-            }
-            display.removeViewer(event.player)
-            interaction.removeViewer(event.player)
-        }
+        val block = FakeBlock(color)
+        block.setGame(game, pos)
 
         var isComplete = false
 
         eventNode.listen<PlayerEntityInteractEvent> { event ->
-            if (event.target != interaction) return@listen
+            if (event.target != block.interaction) return@listen
 
             if (isComplete) {
                 event.player.sendMessage(text("This puzzle is complete.", NamedTextColor.RED))
@@ -152,34 +123,23 @@ data class Safe(
                         }
                     ) {
                         itemName = text(color.name.lowercase().capitalize(), color.textColor)
+
+                        lore {
+                            text(
+                                "Input the 4 correct numbers",
+                                TextDecoration.ITALIC to false,
+                                color = NamedTextColor.GRAY
+                            )
+                            text(
+                                "to receive the color!", TextDecoration.ITALIC to false,
+                                color = NamedTextColor.GRAY
+                            )
+                        }
                     }
                 )
             }
             event.player.openInventory(gui)
         }
 
-    }
-
-    class Display : Entity(EntityType.BLOCK_DISPLAY) {
-        init {
-            editMeta<BlockDisplayMeta> {
-                setBlockState(Block.COMMAND_BLOCK)
-                isHasGlowingEffect = true
-                isHasNoGravity = true
-                this
-            }
-        }
-    }
-
-    class Interaction : Entity(EntityType.INTERACTION) {
-        init {
-            editMeta<InteractionMeta> {
-                height = 1.2f
-                width = 1.2f
-                response = true
-                isHasNoGravity = true
-                this
-            }
-        }
     }
 }
