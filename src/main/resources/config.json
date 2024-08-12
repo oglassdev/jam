@@ -58,6 +58,21 @@
             }
           }
         ]
+      },
+      {
+        "type": "lasers",
+        "lasers": [
+          {
+            "visible": "RED",
+            "sizeX": 4,
+            "position": {
+              "x": -7.5,
+              "y": -48.0,
+              "z": 0.5
+            },
+            "rotation": 1
+          }
+        ]
       }
     ]
   }

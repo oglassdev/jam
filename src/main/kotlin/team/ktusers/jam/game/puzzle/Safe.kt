@@ -64,7 +64,7 @@ data class Safe(val pos: @Contextual BlockVec) : Puzzle {
                 }
             }
             val clicked = Array(4) { -1 }
-            val gui = simpleGui(InventoryType.CRAFTER_3X3, text("Number Safe", NamedTextColor.GRAY)) {
+            val gui = simpleGui(InventoryType.CRAFTER_3X3, text("Combination Safe", NamedTextColor.DARK_GRAY)) {
                 repeat(9) { i ->
                     set(
                         i,

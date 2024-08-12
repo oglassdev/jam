@@ -4,6 +4,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import net.bladehunt.blade.dsl.instance.InstanceBuilder
 import net.bladehunt.blade.dsl.instance.buildInstance
@@ -291,7 +292,27 @@ class JamGame : InstancedGame(
             players.forEach(cutscene::removeViewer)
         }
         +element {
-            withTimeoutOrNull(9.minutes) {
+            val duration = 9.minutes
+            withTimeoutOrNull(duration) {
+                val start = System.currentTimeMillis()
+                launch {
+                    while (true) {
+                        val elapsed = duration - (System.currentTimeMillis() - start).milliseconds
+                        sidebar.updateLineContent(
+                            "timer",
+                            text(
+                                "Time Remaining: ${
+                                    String.format(
+                                        "%02d:%02d",
+                                        elapsed.inWholeMinutes,
+                                        elapsed.inWholeSeconds % 60
+                                    )
+                                }", NamedTextColor.YELLOW
+                            )
+                        )
+                        delay(1000)
+                    }
+                }
                 val eventNode = createElementInstanceEventNode()
 
                 showBossBar(bossbar)
@@ -402,6 +423,14 @@ class JamGame : InstancedGame(
                         position = event.fragment.position
                     }
                     event.fragment.sendPacketToViewers(particle)
+
+                    event.fragment.viewersAsAudience.playSound(
+                        Sound.sound()
+                            .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
+                            .volume(0.6f)
+                            .pitch(0.8f)
+                            .build()
+                    )
 
                     teamInventory.collectedFragments += 1
                     sidebar.updateLineContent(
