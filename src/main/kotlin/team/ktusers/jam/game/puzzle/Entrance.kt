@@ -15,6 +15,7 @@ import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.trait.InstanceEvent
 import net.minestom.server.timer.TaskSchedule
+import team.ktusers.jam.Skin
 import team.ktusers.jam.game.JamGame
 import team.ktusers.jam.util.PlayerNpc
 
@@ -24,11 +25,19 @@ data class Entrance(val pos: @Contextual Pos) : Puzzle {
     private val prefix = text("Wanderer: ", NamedTextColor.GRAY)
 
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
-        val npc = PlayerNpc("_npc_entr")
+        val npc = PlayerNpc("_npc_entr", Skin.ADVENTURER)
 
         npc.setInstance(game.instance, pos).thenAccept {
-            npc.addPassenger(PlayerNpc.Name(text("Wanderer")))
+            npc.addPassenger(PlayerNpc.Name(text("Wanderer", NamedTextColor.DARK_PURPLE)))
         }
+
+        npc.scheduleTask(delay = TaskSchedule.nextTick(), repeat = TaskSchedule.nextTick()) {
+            it.lookAt(it.viewers.asSequence()
+                .filter { viewer -> viewer.getDistanceSquared(it) < 8 * 8 }
+                .minByOrNull { viewer -> viewer.getDistanceSquared(it) }
+                ?: return@scheduleTask)
+        }
+
         var hasInteracted = false
         var isComplete = false
 

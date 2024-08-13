@@ -17,6 +17,7 @@ import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.trait.InstanceEvent
+import net.minestom.server.instance.block.Block
 import net.minestom.server.inventory.InventoryType
 import net.minestom.server.item.Material
 import net.minestom.server.sound.SoundEvent
@@ -34,7 +35,7 @@ data class Safe(
     val color: PaletteColor
 ) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
-        val block = FakeBlock(color)
+        val block = FakeBlock(Block.COMMAND_BLOCK, color)
         block.setGame(game, pos)
 
         var isComplete = false

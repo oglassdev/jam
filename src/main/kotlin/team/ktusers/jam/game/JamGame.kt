@@ -40,6 +40,8 @@ import net.minestom.server.entity.Player
 import net.minestom.server.entity.damage.Damage
 import net.minestom.server.entity.damage.DamageType
 import net.minestom.server.event.entity.EntityDamageEvent
+import net.minestom.server.event.inventory.InventoryPreClickEvent
+import net.minestom.server.event.item.ItemDropEvent
 import net.minestom.server.event.player.*
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
 import net.minestom.server.instance.block.Block
@@ -52,9 +54,6 @@ import net.minestom.server.utils.NamespaceID
 import net.minestom.server.world.DimensionType
 import team.ktusers.jam.Config
 import team.ktusers.jam.Lobby
-import team.ktusers.jam.cutscene.Cutscene
-import team.ktusers.jam.cutscene.CutscenePosition
-import team.ktusers.jam.cutscene.CutsceneText
 import team.ktusers.jam.event.PlayerChangeColorEvent
 import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.event.PlayerCollectFragmentEvent
@@ -62,9 +61,9 @@ import team.ktusers.jam.generated.BlockColor
 import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.item.ColorSelector
 import team.ktusers.jam.item.getCustomItemData
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
@@ -99,7 +98,7 @@ class JamGame : InstancedGame(
             DimensionType.builder()
                 .hasSkylight(false)
                 .effects("minecraft:the_end")
-                .ambientLight(13f).build()
+                .ambientLight(7f).build()
         )
 
         private val POINT_COLORS = hashMapOf<PaletteColor, MutableList<BlockVec>>()
@@ -186,7 +185,7 @@ class JamGame : InstancedGame(
         createLine(
             Sidebar.ScoreboardLine(
                 "timer",
-                text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text("09:00"),
+                text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text("09:00", NamedTextColor.GRAY),
                 -1,
                 Sidebar.NumberFormat.blank()
             )
@@ -239,14 +238,14 @@ class JamGame : InstancedGame(
         createLine(
             Sidebar.ScoreboardLine(
                 "fragment_blue",
-                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text("0/3", NamedTextColor.DARK_GRAY), -8,
+                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text("0/3", NamedTextColor.GRAY), -8,
                 Sidebar.NumberFormat.blank()
             )
         )
         createLine(
             Sidebar.ScoreboardLine(
                 "fragment_orange",
-                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text("0/3", NamedTextColor.DARK_GRAY), -9,
+                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text("0/3", NamedTextColor.GRAY), -9,
                 Sidebar.NumberFormat.blank()
             )
         )
@@ -257,6 +256,8 @@ class JamGame : InstancedGame(
     var Player.currentColor: PaletteColor by store { PaletteColor.NONE }
 
     var Player.deaths: Int by store { 0 }
+
+    var Player.colorCount: Int by store { 0 }
 
     private val _timeElapsed = MutableStateFlow(0)
     val timeElapsed get() = _timeElapsed.asStateFlow()
@@ -352,29 +353,8 @@ class JamGame : InstancedGame(
                     .build()
             )
         }
-        element {
-            val origin = Config.game.spawnPos.withY { it + 2.0 }
-            val cutscene = Cutscene(
-                instance, true, listOf(
-                    CutscenePosition(origin, 0),
-                    CutscenePosition(origin.withZ { it - 10.0 }.withLookAt(Config.game.spawnPos), 50),
-                    CutscenePosition(origin.withX { it + 10.0 }.withLookAt(Config.game.spawnPos), 50),
-                    CutscenePosition(origin, 40)
-                ),
-                listOf(
-                    CutsceneText("Scientists were experimenting with a form of dark matter!", Duration.ofMillis(3634)),
-                    CutsceneText("when suddenly the experiment went wrong!", Duration.ofMillis(5991 - 3634)),
-                    CutsceneText("There was a LEAK!", Duration.ofMillis(7233 - 5991)),
-                    CutsceneText("The dark matter started to spread!", Duration.ofMillis(8970 - 7233)),
-                    CutsceneText("And only you, can stop it!", Duration.ofMillis(10671 - 8970))
-                )
-            )
-            players.forEach(cutscene::addViewer)
-            cutscene.start()
-            players.forEach(cutscene::removeViewer)
-        }
         +element {
-            val duration = 9.minutes
+            val duration = 1.minutes
             withTimeoutOrNull(duration) {
                 val start = System.currentTimeMillis()
                 launch {
@@ -393,14 +373,24 @@ class JamGame : InstancedGame(
                         delay(1000)
                     }
                 }
+
+                players.forEach {
+                    it.teleport(Config.game.spawnPos)
+                }
                 val eventNode = createElementInstanceEventNode()
 
                 Config.game.puzzles.forEach { it.onElementStart(this@JamGame, eventNode) }
 
                 players.forEach {
-                    it.inventory.setItemStack(8, ColorSelector(it.currentColor).createItemStack())
+                    it.inventory.setItemStack(4, ColorSelector(it.currentColor).createItemStack())
                 }
 
+                eventNode.listen<PlayerSwapItemEvent> { it.isCancelled = true }
+                eventNode.listen<ItemDropEvent> { it.isCancelled = true }
+                eventNode.listen<InventoryPreClickEvent> {
+                    if (it.inventory != it.player.inventory) return@listen
+                    it.isCancelled = true
+                }
                 eventNode.listen<PlayerBlockInteractEvent> { event ->
                     val usedItem = event.player.getItemInHand(Player.Hand.MAIN).getCustomItemData() ?: return@listen
 
@@ -481,6 +471,7 @@ class JamGame : InstancedGame(
                     }
                     batch.apply(instance, null)
                     teamInventory.colors += event.color
+                    event.player.colorCount++
 
                     bossbar.name(text("Colors Collected (${teamInventory.colors.size}/8)", event.color.textColor))
                     bossbar.progress(teamInventory.colors.size / 8f)
@@ -550,7 +541,7 @@ class JamGame : InstancedGame(
                                 "fragment_orange",
                                 text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text(
                                     "${teamInventory.orangeFragments}/3",
-                                    NamedTextColor.DARK_GRAY
+                                    NamedTextColor.GRAY
                                 )
                             )
                         }
@@ -570,7 +561,7 @@ class JamGame : InstancedGame(
                                 "fragment_blue",
                                 text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text(
                                     "${teamInventory.blueFragments}/3",
-                                    NamedTextColor.DARK_GRAY
+                                    NamedTextColor.GRAY
                                 )
                             )
                         }
@@ -591,13 +582,22 @@ class JamGame : InstancedGame(
             players.forEach {
                 sidebar.removeViewer(it)
             }
+            val score: Int = min(teamInventory.colors.size * 5 - players.sumOf { it.deaths * 2 }, 0)
             sendMessage(
-                text("Game Overview", TextDecoration.BOLD, color = NamedTextColor.DARK_GREEN) + newline() +
-                        text(
-                            "Most cured: ",
-                            TextDecoration.BOLD,
-                            color = NamedTextColor.DARK_GREEN
-                        )
+                newline() +
+                        text("                ɢᴀᴍᴇ ᴏᴠᴇʀᴠɪᴇᴡ", NamedTextColor.DARK_PURPLE) +
+                        newline() + newline() +
+                        text("Score: ", NamedTextColor.LIGHT_PURPLE) +
+                        text("$score/40", NamedTextColor.WHITE) +
+                        newline() +
+                        text("Most Colors: ", PaletteColor.ORANGE.textColor) +
+                        (players.filter { it.colorCount > 0 }.maxByOrNull { it.deaths }?.name
+                            ?: text("Nobody", NamedTextColor.DARK_GRAY)) +
+                        text("    -    ", NamedTextColor.GRAY) +
+                        text("Most Deaths: ", NamedTextColor.RED) +
+                        (players.filter { it.deaths > 0 }.maxByOrNull { it.deaths }?.name
+                            ?: text("Nobody", NamedTextColor.DARK_GRAY)) +
+                        newline()
             )
             players.forEach {
                 it.inventory.clear()
