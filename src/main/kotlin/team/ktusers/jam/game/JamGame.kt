@@ -34,7 +34,6 @@ import net.kyori.adventure.text.Component.newline
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.title.Title
-import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
 import net.minestom.server.entity.damage.Damage
@@ -46,7 +45,8 @@ import net.minestom.server.event.player.*
 import net.minestom.server.instance.batch.AbsoluteBlockBatch
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
-import net.minestom.server.network.packet.server.play.BlockChangePacket
+import net.minestom.server.network.packet.server.SendablePacket
+import net.minestom.server.network.packet.server.play.MultiBlockChangePacket
 import net.minestom.server.particle.Particle
 import net.minestom.server.scoreboard.Sidebar
 import net.minestom.server.sound.SoundEvent
@@ -101,7 +101,8 @@ class JamGame : InstancedGame(
                 .ambientLight(7f).build()
         )
 
-        private val POINT_COLORS = hashMapOf<PaletteColor, MutableList<BlockVec>>()
+        lateinit var POINT_COLORS: Map<PaletteColor, List<SendablePacket>>
+        lateinit var REVERSED: Map<PaletteColor, List<SendablePacket>>
 
         private val REFERENCE = buildInstance {
             polar {
@@ -116,56 +117,111 @@ class JamGame : InstancedGame(
                 fromResource("/world.polar")
             }
 
-            instance.loadChunks(0, 0, 8).thenAccept {
+            instance.loadChunks(0, 0, 11).thenAccept {
+                // color -> black
+                val fromColors = EnumMap<PaletteColor, MutableList<SendablePacket>>(PaletteColor::class.java)
+                // black -> color
+                val toColors = EnumMap<PaletteColor, MutableList<SendablePacket>>(PaletteColor::class.java)
+
                 val batch = AbsoluteBlockBatch()
 
+                logger.info("Beginning to calculate batch & packets...")
                 instance.chunks.forEach { chunk ->
-                    for (x in 0..15) {
-                        for (y in -64..30) {
-                            for (z in 0..15) {
-                                try {
-                                    val current = chunk.getBlock(x, y, z)
-                                    if (current.isAir) continue
-                                    val block = current.namespace().path()
-                                    var newBlock: Block = when {
-                                        block.contains("stairs", ignoreCase = true) -> JamBlock.BLACK_STAIRS
-                                        block.contains("slab", ignoreCase = true) -> JamBlock.BLACK_SLAB
-                                        block.contains("wall", ignoreCase = true) -> JamBlock.BLACK_WALL
-                                        block.contains("fence", ignoreCase = true) -> JamBlock.BLACK_FENCE
-                                        block.contains("carpet", ignoreCase = true) -> JamBlock.BLACK_CARPET
-                                        block.contains("button", ignoreCase = true) -> JamBlock.BLACK_BUTTON
-                                        else -> if (!current.properties()
-                                                .contains("waterlogged")
-                                        ) JamBlock.BLACK else continue
-                                    }
-                                    if (newBlock != JamBlock.BLACK) {
-                                        newBlock = newBlock.withNbt(
-                                            current.nbt()
-                                        ).withProperties(current.properties())
-                                    }
+                    for (section in chunk.minSection..<chunk.maxSection) {
+                        val palette = chunk.getSection(section).blockPalette()
+                        val blocks = Array<ArrayList<Long>>(PaletteColor.entries.size) { arrayListOf() }
+                        val revert = Array<ArrayList<Long>>(PaletteColor.entries.size) { arrayListOf() }
 
-                                    val point = BlockVec(
-                                        x + chunk.chunkX * 16,
-                                        y,
-                                        z + chunk.chunkZ * 16
-                                    )
-                                    val color = BlockColor.getColor(current)
-                                    POINT_COLORS.getOrPut(color) { arrayListOf() }.add(point)
+                        for (x in 0..15) {
+                            for (y in 0..15) {
+                                for (z in 0..15) {
+                                    try {
+                                        val current = requireNotNull(Block.fromStateId(palette[x, y, z]))
+                                        if (current.isAir) continue
+                                        val block = current.namespace().path()
+                                        var newBlock: Block = when {
+                                            block.contains("stairs", ignoreCase = true) -> JamBlock.BLACK_STAIRS
+                                            block.contains("slab", ignoreCase = true) -> JamBlock.BLACK_SLAB
+                                            block.contains(
+                                                "wall",
+                                                ignoreCase = true
+                                            ) && !block.contains("sign") && !block.contains("banner") -> JamBlock.BLACK_WALL
 
-                                    batch.setBlock(
-                                        point,
-                                        newBlock
-                                    )
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                                            block.contains("fence", ignoreCase = true) -> JamBlock.BLACK_FENCE
+                                            block.contains("carpet", ignoreCase = true) -> JamBlock.BLACK_CARPET
+                                            block.contains("leaves", ignoreCase = true) -> JamBlock.BLACK
+                                            block.contains("button", ignoreCase = true) -> JamBlock.BLACK_BUTTON
+                                            block.contains("sponge", ignoreCase = true) ||
+                                                    block.contains("sculk") ||
+                                                    block.contains("glass") ||
+                                                    block.contains("water") ||
+                                                    block.contains("lava") ||
+                                                    current.properties().contains("waterlogged") -> continue
+
+                                            else -> if (!current.properties()
+                                                    .contains("waterlogged")
+                                            ) JamBlock.BLACK else continue
+                                        }
+                                        if (newBlock != JamBlock.BLACK) {
+                                            newBlock = newBlock.withNbt(
+                                                current.nbt()
+                                            ).withProperties(current.properties())
+                                        }
+
+                                        val color = BlockColor.getColor(current)
+
+                                        batch.setBlock(
+                                            x + chunk.chunkX * 16,
+                                            y + section * 16,
+                                            z + chunk.chunkZ * 16,
+                                            newBlock
+                                        )
+
+                                        blocks[color.ordinal].add(
+                                            current.stateId().toLong() shl 12 or ((x shl 8 or (z shl 4) or y)).toLong()
+                                        )
+                                        revert[color.ordinal].add(
+                                            newBlock.stateId().toLong() shl 12 or ((x shl 8 or (z shl 4) or y)).toLong()
+                                        )
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
                                 }
                             }
                         }
+
+                        PaletteColor.entries.forEachIndexed { index, paletteColor ->
+                            fromColors
+                                .getOrPut(paletteColor) { arrayListOf() }
+                                .add(
+                                    MultiBlockChangePacket(
+                                        chunk.chunkX,
+                                        section,
+                                        chunk.chunkZ,
+                                        revert[index].toLongArray()
+                                    )
+                                )
+
+                            toColors
+                                .getOrPut(paletteColor) { arrayListOf() }
+                                .add(
+                                    MultiBlockChangePacket(
+                                        chunk.chunkX,
+                                        section,
+                                        chunk.chunkZ,
+                                        blocks[index].toLongArray()
+                                    )
+                                )
+                        }
                     }
                 }
+                logger.info("Finished calculating batch & packets!")
+
+                POINT_COLORS = toColors
+                REVERSED = fromColors
 
                 batch.apply(instance) {
-                    logger.info("Applied batch")
+                    logger.info("Successfully applied blackout batch!")
                 }
             }
         }.instance
@@ -267,15 +323,7 @@ class JamGame : InstancedGame(
     init {
         instance.eventNode().listen<PlayerChunkLoadEvent> { event ->
             val points = POINT_COLORS[event.player.currentColor] ?: return@listen
-            event.player.sendPackets(
-                points.mapNotNull {
-                    if (it.chunkX() == event.chunkX && it.chunkZ() == event.chunkZ) BlockChangePacket(
-                        it,
-                        REFERENCE.getBlock(it)
-                    )
-                    else null
-                }
-            )
+            event.player.sendPackets(points as Collection<SendablePacket>)
         }
     }
 
@@ -417,13 +465,11 @@ class JamGame : InstancedGame(
                         player.inventory.setItemStack(slot, itemStack)
                     }
 
-                    POINT_COLORS[fromColor]?.let { previous ->
+                    REVERSED[fromColor]?.let { previous ->
                         if (teamInventory.colors.contains(fromColor)) return@let
 
                         player.sendPackets(
-                            previous.map {
-                                BlockChangePacket(it, instance.getBlock(it))
-                            }
+                            previous as Collection<SendablePacket>
                         )
                     }
                     event.player.sendPacket(
@@ -435,11 +481,7 @@ class JamGame : InstancedGame(
                     )
                     player.currentColor = toColor
                     val points = POINT_COLORS[toColor] ?: return@listen
-                    event.player.sendPackets(
-                        points.map {
-                            BlockChangePacket(it, REFERENCE.getBlock(it))
-                        }
-                    )
+                    event.player.sendPackets(points as Collection<SendablePacket>)
                 }
 
                 eventNode.listen<EntityDamageEvent> { event ->
@@ -466,9 +508,6 @@ class JamGame : InstancedGame(
 
                 eventNode.listen<PlayerCollectColorEvent> { event ->
                     val batch = AbsoluteBlockBatch()
-                    POINT_COLORS[event.color]?.forEach {
-                        batch.setBlock(it, REFERENCE.getBlock(it))
-                    }
                     batch.apply(instance, null)
                     teamInventory.colors += event.color
                     event.player.colorCount++

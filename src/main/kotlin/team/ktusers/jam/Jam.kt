@@ -41,31 +41,52 @@ val Config: JamConfig =
 
 suspend fun main() = blade(
     PropertiesModule(
-        "minestom.chunk-view-distance" to 18
+        "minestom.chunk-view-distance" to 8
     )
 ) {
     JamGame
     CUTSCENE_REFERENCE
-
     /*
-    val inst = buildInstance {
-        anvil {
-            fromPath("./world")
-        }
-        instance.enableAutoChunkLoad(false)
 
-        CompletableFuture.allOf(
-            this.instance.loadChunks(-9, -8, 10),
-            this.instance.loadChunks(12, -19, 16)
-        ).thenAccept {
-            polar {
-                fromPath("./world.polar")
+        val inst = buildInstance {
+            anvil {
+                fromPath("./world")
             }
-            instance.saveChunksToStorage().thenAccept {
-                println("saved chunks")
+            instance.enableAutoChunkLoad(false)
+
+            val chunks = ArrayList<CompletableFuture<Chunk>>()
+
+            for (x in -11..10) {
+                for (y in -11..10) {
+                    chunks.add(this.instance.loadChunk(x, y))
+                }
             }
-        }
-    }*/
+            CompletableFuture.allOf(*chunks.toTypedArray()).thenAccept {
+                polar {
+                    fromPath("./world.polar")
+                }
+
+                val batch = AbsoluteBlockBatch()
+                for (chunk in instance.chunks) {
+                    for (x in 0..15) {
+                        for (y in -64..<0) {
+                            for (z in 0..15) {
+                                if (!chunk.getBlock(x, y, z).isAir) batch.setBlock(x, y, z, Block.AIR)
+                            }
+                        }
+                    }
+                }
+                batch.apply(instance) {
+                    println("applied goated batch")
+                }
+
+                instance.saveChunksToStorage().thenAccept {
+                    println("saved chunks")
+
+                }
+
+            }
+        }*/
 
 
     CommandManager.register(LobbyCommand, JoinCommand, CutsceneCommand)
