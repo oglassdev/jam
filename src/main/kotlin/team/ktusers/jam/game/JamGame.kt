@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import net.bladehunt.blade.dsl.instance.InstanceBuilder
 import net.bladehunt.blade.dsl.instance.buildInstance
@@ -57,12 +58,14 @@ import team.ktusers.jam.Lobby
 import team.ktusers.jam.event.PlayerChangeColorEvent
 import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.event.PlayerCollectFragmentEvent
+import team.ktusers.jam.event.PlayerPlaceAllRelicsEvent
 import team.ktusers.jam.generated.BlockColor
 import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.item.ColorSelector
 import team.ktusers.jam.item.getCustomItemData
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import kotlin.coroutines.resume
 import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -158,11 +161,22 @@ class JamGame : InstancedGame(
                                                     block.contains("lava") ||
                                                     current.properties().contains("waterlogged") -> continue
 
+                                            block.contains("fern") ||
+                                                    block.endsWith("grass") ||
+                                                    block == "azure_bluet" ||
+                                                    block == "dandelion" ||
+                                                    block == "blue_orchid" ||
+                                                    block == "allium" ||
+                                                    block == "brown_mushroom" ||
+                                                    block == "red_mushroom" ||
+                                                    block == "lilac" ||
+                                                    block == "poppy" -> Block.AIR
+
                                             else -> if (!current.properties()
                                                     .contains("waterlogged")
                                             ) JamBlock.BLACK else continue
                                         }
-                                        if (newBlock != JamBlock.BLACK) {
+                                        if (newBlock != JamBlock.BLACK && newBlock != Block.AIR) {
                                             newBlock = newBlock.withNbt(
                                                 current.nbt()
                                             ).withProperties(current.properties())
@@ -265,7 +279,7 @@ class JamGame : InstancedGame(
         createLine(
             Sidebar.ScoreboardLine(
                 "colors",
-                text(" ᴄᴏʟᴏʀꜱ: ", NamedTextColor.RED) + text("0/8", NamedTextColor.GRAY), -4,
+                text(" ʀᴇʟɪᴄꜱ: ", NamedTextColor.RED) + text("0/7", NamedTextColor.GRAY), -4,
                 Sidebar.NumberFormat.blank()
             )
         )
@@ -402,218 +416,215 @@ class JamGame : InstancedGame(
             )
         }
         +element {
-            val duration = 1.minutes
+            val duration = 9.minutes
             withTimeoutOrNull(duration) {
-                val start = System.currentTimeMillis()
-                launch {
-                    while (true) {
-                        val elapsed = duration - (System.currentTimeMillis() - start).milliseconds
-                        sidebar.updateLineContent(
-                            "timer",
-                            text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text(
-                                String.format(
-                                    "%02d:%02d",
-                                    elapsed.inWholeMinutes,
-                                    elapsed.inWholeSeconds % 60
-                                ), NamedTextColor.GRAY
+                suspendCancellableCoroutine { continuation ->
+                    val start = System.currentTimeMillis()
+                    launch {
+                        while (true) {
+                            val elapsed = duration - (System.currentTimeMillis() - start).milliseconds
+                            sidebar.updateLineContent(
+                                "timer",
+                                text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text(
+                                    String.format(
+                                        "%02d:%02d",
+                                        elapsed.inWholeMinutes,
+                                        elapsed.inWholeSeconds % 60
+                                    ), NamedTextColor.GRAY
+                                )
                             )
-                        )
-                        delay(1000)
-                    }
-                }
-
-                players.forEach {
-                    it.teleport(Config.game.spawnPos)
-                }
-                val eventNode = createElementInstanceEventNode()
-
-                Config.game.puzzles.forEach { it.onElementStart(this@JamGame, eventNode) }
-
-                players.forEach {
-                    it.inventory.setItemStack(4, ColorSelector(it.currentColor).createItemStack())
-                }
-
-                eventNode.listen<PlayerSwapItemEvent> { it.isCancelled = true }
-                eventNode.listen<ItemDropEvent> { it.isCancelled = true }
-                eventNode.listen<InventoryPreClickEvent> {
-                    if (it.inventory != it.player.inventory) return@listen
-                    it.isCancelled = true
-                }
-                eventNode.listen<PlayerBlockInteractEvent> { event ->
-                    val usedItem = event.player.getItemInHand(Player.Hand.MAIN).getCustomItemData() ?: return@listen
-
-                    usedItem.onBlockInteract(event)
-
-                    event.isBlockingItemUse = true
-                }
-
-                eventNode.listen<PlayerUseItemEvent> { event ->
-                    val usedItem = event.itemStack.getCustomItemData() ?: return@listen
-
-                    usedItem.onUse(event)
-                }
-                eventNode.listen<PlayerChangeColorEvent> { event ->
-                    val updates = hashMapOf<Int, ItemStack>()
-                    val (_, player, fromColor, toColor) = event
-                    player.inventory.itemStacks.forEachIndexed { slot, itemStack ->
-                        val data = itemStack.getCustomItemData() as? ColorSelector? ?: return@forEachIndexed
-
-                        updates[slot] = data.copy(selectedColor = event.toColor).createItemStack()
-                    }
-
-                    updates.forEach { (slot, itemStack) ->
-                        player.inventory.setItemStack(slot, itemStack)
-                    }
-
-                    REVERSED[fromColor]?.let { previous ->
-                        if (teamInventory.colors.contains(fromColor)) return@let
-
-                        player.sendPackets(
-                            previous as Collection<SendablePacket>
-                        )
-                    }
-                    event.player.sendPacket(
-                        particle {
-                            particle = Particle.EXPLOSION_EMITTER
-                            count = 2
-                            position = event.player.position.add(0.0, event.player.eyeHeight - 0.5, 0.0)
+                            delay(1000)
                         }
-                    )
-                    player.currentColor = toColor
-                    val points = POINT_COLORS[toColor] ?: return@listen
-                    event.player.sendPackets(points as Collection<SendablePacket>)
-                }
-
-                eventNode.listen<EntityDamageEvent> { event ->
-                    val player = event.entity as? Player ?: return@listen
-
-                    if (player.health - event.damage.amount > 0.0) return@listen
-                    event.isCancelled = true
-
-                    player.showTitle(
-                        Title.title(text("You Died", NamedTextColor.RED), empty(), TIMES)
-                    )
-                    player.heal()
-                    player.teleport(Config.game.spawnPos)
-                    sendMessage(player.name + text(" died!", NamedTextColor.RED))
-                    player.deaths++
-                    sidebar.updateLineContent(
-                        "deaths",
-                        text(" ᴅᴇᴀᴛʜꜱ: ", NamedTextColor.RED) + text(
-                            players.sumOf { it.deaths }.toString(),
-                            NamedTextColor.GRAY
-                        )
-                    )
-                }
-
-                eventNode.listen<PlayerCollectColorEvent> { event ->
-                    val batch = AbsoluteBlockBatch()
-                    batch.apply(instance, null)
-                    teamInventory.colors += event.color
-                    event.player.colorCount++
-
-                    bossbar.name(text("Colors Collected (${teamInventory.colors.size}/8)", event.color.textColor))
-                    bossbar.progress(teamInventory.colors.size / 8f)
-                    sidebar.updateLineContent(
-                        "colors",
-                        text(" ᴄᴏʟᴏʀꜱ: ", NamedTextColor.RED) + text(
-                            "${teamInventory.colors.size}/8",
-                            NamedTextColor.GRAY
-                        )
-                    )
-
-                    sendMessage(
-                        text("+ ", NamedTextColor.GREEN) + text(
-                            event.color.name.lowercase().capitalize(),
-                            event.color.textColor
-                        )
-                    )
+                    }
 
                     players.forEach {
-                        it.sendPacket(
+                        it.teleport(Config.game.spawnPos)
+                    }
+                    val eventNode = createElementInstanceEventNode()
+
+                    Config.game.puzzles.forEach { it.onElementStart(this@JamGame, eventNode) }
+
+                    players.forEach {
+                        it.inventory.setItemStack(4, ColorSelector(it.currentColor).createItemStack())
+                    }
+
+                    eventNode.listen<PlayerSwapItemEvent> { it.isCancelled = true }
+                    eventNode.listen<ItemDropEvent> { it.isCancelled = true }
+                    eventNode.listen<InventoryPreClickEvent> {
+                        if (it.inventory != it.player.inventory) return@listen
+                        it.isCancelled = true
+                    }
+                    eventNode.listen<PlayerBlockInteractEvent> { event ->
+                        val usedItem = event.player.getItemInHand(Player.Hand.MAIN).getCustomItemData() ?: return@listen
+
+                        usedItem.onBlockInteract(event)
+
+                        event.isBlockingItemUse = true
+                    }
+
+                    eventNode.listen<PlayerUseItemEvent> { event ->
+                        val usedItem = event.itemStack.getCustomItemData() ?: return@listen
+
+                        usedItem.onUse(event)
+                    }
+                    eventNode.listen<PlayerChangeColorEvent> { event ->
+                        val updates = hashMapOf<Int, ItemStack>()
+                        val (_, player, fromColor, toColor) = event
+                        player.inventory.itemStacks.forEachIndexed { slot, itemStack ->
+                            val data = itemStack.getCustomItemData() as? ColorSelector? ?: return@forEachIndexed
+
+                            updates[slot] = data.copy(selectedColor = event.toColor).createItemStack()
+                        }
+
+                        updates.forEach { (slot, itemStack) ->
+                            player.inventory.setItemStack(slot, itemStack)
+                        }
+
+                        REVERSED[fromColor]?.let { previous ->
+                            player.sendPackets(
+                                previous as Collection<SendablePacket>
+                            )
+                        }
+                        event.player.sendPacket(
                             particle {
                                 particle = Particle.EXPLOSION_EMITTER
                                 count = 2
-                                position = it.position.add(0.0, it.eyeHeight - 0.5, 0.0)
+                                position = event.player.position.add(0.0, event.player.eyeHeight - 0.5, 0.0)
                             }
+                        )
+                        player.currentColor = toColor
+                        val points = POINT_COLORS[toColor] ?: return@listen
+                        event.player.sendPackets(points as Collection<SendablePacket>)
+                    }
+
+                    eventNode.listen<EntityDamageEvent> { event ->
+                        val player = event.entity as? Player ?: return@listen
+
+                        if (player.health - event.damage.amount > 0.0) return@listen
+                        event.isCancelled = true
+
+                        player.showTitle(
+                            Title.title(text("You Died", NamedTextColor.RED), empty(), TIMES)
+                        )
+                        player.heal()
+                        player.teleport(Config.game.spawnPos)
+                        sendMessage(player.name + text(" died!", NamedTextColor.RED))
+                        player.deaths++
+                        sidebar.updateLineContent(
+                            "deaths",
+                            text(" ᴅᴇᴀᴛʜꜱ: ", NamedTextColor.RED) + text(
+                                players.sumOf { it.deaths }.toString(),
+                                NamedTextColor.GRAY
+                            )
                         )
                     }
 
-                    playSound(
-                        Sound.sound()
-                            .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
-                            .volume(0.6f)
-                            .pitch(0.8f)
-                            .build()
-                    )
-                }
-                eventNode.listen<PlayerCollectFragmentEvent> { event ->
-                    val particle = particle {
-                        particle = Particle.EXPLOSION
-                        count = 2
-                        position = event.fragment.position
+                    eventNode.listen<PlayerCollectColorEvent> { event ->
+                        teamInventory.colors += event.color
+                        event.player.colorCount++
+
+                        bossbar.name(text("Colors Collected (${teamInventory.colors.size}/8)", event.color.textColor))
+                        bossbar.progress(teamInventory.colors.size / 8f)
+                        sidebar.updateLineContent(
+                            "colors",
+                            text(" ʀᴇʟɪᴄꜱ: ", NamedTextColor.RED) + text(
+                                "${teamInventory.colors.size}/7",
+                                NamedTextColor.GRAY
+                            )
+                        )
+
+                        sendMessage(
+                            text("+ ", NamedTextColor.GREEN) + text(
+                                event.color.name.lowercase().capitalize(),
+                                event.color.textColor
+                            )
+                        )
+
+                        players.forEach {
+                            it.sendPacket(
+                                particle {
+                                    particle = Particle.EXPLOSION_EMITTER
+                                    count = 2
+                                    position = it.position.add(0.0, it.eyeHeight - 0.5, 0.0)
+                                }
+                            )
+                        }
+
+                        playSound(
+                            Sound.sound()
+                                .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
+                                .volume(0.6f)
+                                .pitch(0.8f)
+                                .build()
+                        )
                     }
+                    eventNode.listen<PlayerCollectFragmentEvent> { event ->
+                        val particle = particle {
+                            particle = Particle.EXPLOSION
+                            count = 2
+                            position = event.fragment.position
+                        }
 
-                    event.fragment.sendPacketToViewers(particle)
+                        event.fragment.sendPacketToViewers(particle)
 
-                    event.fragment.viewersAsAudience.playSound(
-                        Sound.sound()
-                            .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
-                            .volume(0.6f)
-                            .pitch(0.8f)
-                            .build()
-                    )
+                        event.fragment.viewersAsAudience.playSound(
+                            Sound.sound()
+                                .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
+                                .volume(0.6f)
+                                .pitch(0.8f)
+                                .build()
+                        )
 
-                    when (event.fragment.finalColor) {
-                        PaletteColor.ORANGE -> {
-                            teamInventory.orangeFragments += 1
+                        when (event.fragment.finalColor) {
+                            PaletteColor.ORANGE -> {
+                                teamInventory.orangeFragments += 1
 
-                            if (teamInventory.orangeFragments == 3) {
-                                GlobalEventHandler.call(
-                                    PlayerCollectColorEvent(
-                                        this@JamGame, event.player, PaletteColor.ORANGE
+                                if (teamInventory.orangeFragments == 3) {
+                                    GlobalEventHandler.call(
+                                        PlayerCollectColorEvent(
+                                            this@JamGame, event.player, PaletteColor.ORANGE
+                                        )
+                                    )
+                                }
+
+                                sidebar.updateLineContent(
+                                    "fragment_orange",
+                                    text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text(
+                                        "${teamInventory.orangeFragments}/3",
+                                        NamedTextColor.GRAY
                                     )
                                 )
                             }
 
-                            sidebar.updateLineContent(
-                                "fragment_orange",
-                                text(" ᴏʀᴀɴɢᴇ: ", PaletteColor.ORANGE.textColor) + text(
-                                    "${teamInventory.orangeFragments}/3",
-                                    NamedTextColor.GRAY
-                                )
-                            )
-                        }
+                            PaletteColor.BLUE -> {
+                                teamInventory.blueFragments += 1
 
-                        PaletteColor.BLUE -> {
-                            teamInventory.blueFragments += 1
+                                if (teamInventory.blueFragments == 3) {
+                                    GlobalEventHandler.call(
+                                        PlayerCollectColorEvent(
+                                            this@JamGame, event.player, PaletteColor.BLUE
+                                        )
+                                    )
+                                }
 
-                            if (teamInventory.blueFragments == 3) {
-                                GlobalEventHandler.call(
-                                    PlayerCollectColorEvent(
-                                        this@JamGame, event.player, PaletteColor.BLUE
+                                sidebar.updateLineContent(
+                                    "fragment_blue",
+                                    text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text(
+                                        "${teamInventory.blueFragments}/3",
+                                        NamedTextColor.GRAY
                                     )
                                 )
                             }
 
-                            sidebar.updateLineContent(
-                                "fragment_blue",
-                                text(" ʙʟᴜᴇ: ", NamedTextColor.BLUE) + text(
-                                    "${teamInventory.blueFragments}/3",
-                                    NamedTextColor.GRAY
-                                )
-                            )
+                            else -> throw IllegalStateException("Updated fragment must be orange or blue")
                         }
 
-                        else -> throw IllegalStateException("Updated fragment must be orange or blue")
                     }
 
+                    eventNode.listen<PlayerPlaceAllRelicsEvent> {
+                        continuation.resume(Unit)
+                    }
                 }
-
-                eventNode.listen { }
-
-                delay(100000)
-
             }
         }
         +element {

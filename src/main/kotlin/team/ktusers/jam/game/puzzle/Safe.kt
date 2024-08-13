@@ -49,15 +49,15 @@ data class Safe(
                 return@listen
             }
             val random = arrayListOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
-            val code = Array(4) { -1 }
-            repeat(4) { i ->
+            val code = Array(3) { -1 }
+            repeat(3) { i ->
                 code[i] = Random.nextInt(random.size).let { num ->
                     val final = random[num]
                     random.remove(final)
                     final
                 }
             }
-            val clicked = Array(4) { -1 }
+            val clicked = Array(3) { -1 }
             val gui = simpleGui(InventoryType.CRAFTING, text("Combination Safe", NamedTextColor.DARK_GRAY)) {
                 repeat(9) { i ->
                     set(
@@ -78,7 +78,7 @@ data class Safe(
                                     .build()
                             )
                         }
-                        if (index >= 3 || index == -1) {
+                        if (index >= 2 || index == -1) {
                             if (clicked.contentEquals(code)) {
 
                                 clickEvent.player.playSound(
@@ -103,7 +103,6 @@ data class Safe(
                             clicked[0] = -1
                             clicked[1] = -1
                             clicked[2] = -1
-                            clicked[3] = -1
                             return@set
                         }
 

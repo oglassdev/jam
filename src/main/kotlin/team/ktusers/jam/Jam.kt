@@ -14,6 +14,9 @@ import net.bladehunt.kotstom.extension.register
 import net.bladehunt.kotstom.serialization.MinestomConfigModule
 import net.bladehunt.kotstom.serialization.MinestomModule
 import net.bladehunt.kotstom.serialization.adventure.AdventureNbt
+import net.kyori.adventure.resource.ResourcePackInfo
+import net.kyori.adventure.resource.ResourcePackRequest
+import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor.GRAY
 import net.minestom.server.event.player.PlayerChatEvent
 import team.ktusers.jam.command.CutsceneCommand
@@ -22,6 +25,8 @@ import team.ktusers.jam.command.LobbyCommand
 import team.ktusers.jam.config.JamConfig
 import team.ktusers.jam.cutscene.CUTSCENE_REFERENCE
 import team.ktusers.jam.game.JamGame
+import java.net.URI
+import java.util.*
 
 val Json = Json {
     serializersModule = MinestomConfigModule
@@ -98,7 +103,24 @@ suspend fun main() = blade(
         }
     }
 
+    val rp = ResourcePackRequest.resourcePackRequest()
+        .required(true)
+        .prompt(
+            text("You must use the resource pack for the best experience!") +
+                    Component.newline() +
+                    text("Additionally, fabulous quality is recommended.")
+        )
+        .packs(
+            ResourcePackInfo.resourcePackInfo(
+                UUID.randomUUID(),
+                URI(Config.resourcePack.url),
+                Config.resourcePack.hash
+            )
+        )
+        .build()
+
     onConfigure {
         spawningInstance = Lobby
+        player.sendResourcePacks(rp)
     }
 }

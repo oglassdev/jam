@@ -3,6 +3,7 @@ package team.ktusers.jam.game.puzzle
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.bladehunt.kotstom.GlobalEventHandler
 import net.bladehunt.kotstom.dsl.item.item
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.dsl.scheduleTask
@@ -21,12 +22,14 @@ import net.minestom.server.entity.metadata.display.ItemDisplayMeta
 import net.minestom.server.entity.metadata.display.TextDisplayMeta
 import net.minestom.server.entity.metadata.other.InteractionMeta
 import net.minestom.server.event.EventNode
+import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.player.PlayerTickEvent
 import net.minestom.server.event.trait.InstanceEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.Material
 import net.minestom.server.timer.TaskSchedule
 import team.ktusers.jam.event.PlayerChangeColorEvent
+import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.game.JamGame
 import team.ktusers.jam.generated.PaletteColor
 
@@ -40,32 +43,40 @@ data class Lasers(
 ) : Puzzle {
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
         val lasers = lasers.map {
-            val laser = Laser(it.visible, it.sizeX, it.rotation)
+            val laser = Laser(it.invisible, it.sizeX, it.rotation)
             laser.setInstance(game.instance, it.position.asPosition().withYaw((it.rotation * 90).toFloat()))
             laser.updateViewableRule { player ->
                 with(game) {
-                    player.currentColor == it.visible
+                    player.currentColor != it.invisible
                 }
             }
             laser
         }
 
-        LaserObjective(objective).setGame(game, objectivePosition)
+        val obj = LaserObjective(objective)
+        obj.setGame(game, objectivePosition)
 
         eventNode.listen<PlayerChangeColorEvent> { event ->
+            if (objective == event.toColor) obj.view(event.player)
+            else obj.unview(event.player)
             lasers.forEach {
-                if (event.toColor != it.visible) {
-                    it.removeViewer(event.player)
-                } else it.addViewer(event.player)
+                if (event.toColor == it.invisible) it.removeViewer(event.player)
+                else it.addViewer(event.player)
             }
+        }
+
+        eventNode.listen<PlayerEntityInteractEvent> { event ->
+            if (event.target != obj.hitbox) return@listen
+            obj.remove()
+            GlobalEventHandler.call(PlayerCollectColorEvent(game, event.player, objective))
         }
 
         eventNode.listen<PlayerTickEvent> { event ->
             val color = with(game) { event.player.currentColor }
             if (event.player.position == event.player.previousPosition) return@listen
-            lasers.filter { it.visible == color }.forEach { laser ->
+            lasers.filter { it.invisible != color }.forEach { laser ->
                 if (laser.boundingBox.intersectEntity(laser.position, event.player)) {
-                    event.player.damage(Damage.fromEntity(laser, 0.25f))
+                    event.player.damage(Damage.fromEntity(laser, 1f))
                 }
             }
         }
@@ -73,14 +84,14 @@ data class Lasers(
 }
 
 data class Laser(
-    val visible: PaletteColor,
+    val invisible: PaletteColor,
     val sizeX: Double,
     val rot: Int
 ) : Entity(EntityType.BLOCK_DISPLAY) {
     init {
         editMeta<BlockDisplayMeta> {
             setBlockState(
-                when (visible) {
+                when (invisible) {
                     PaletteColor.RED -> Block.RED_STAINED_GLASS
                     PaletteColor.ORANGE -> Block.ORANGE_STAINED_GLASS
                     PaletteColor.YELLOW -> Block.YELLOW_STAINED_GLASS
@@ -110,14 +121,14 @@ data class Laser(
     }
 
     @Serializable
-    data class Config(val visible: PaletteColor, val sizeX: Double, val position: @Contextual Vec, val rotation: Int)
+    data class Config(val invisible: PaletteColor, val sizeX: Double, val position: @Contextual Vec, val rotation: Int)
 }
 
 class LaserObjective(
     val color: PaletteColor
 ) : Entity(EntityType.ITEM_DISPLAY) {
-    private val hitbox = Hitbox(this)
-    private val title = Title(this)
+    val hitbox = Hitbox(this)
+    val title = Title(this)
 
     init {
         editMeta<ItemDisplayMeta> {
@@ -205,7 +216,7 @@ class LaserObjective(
         init {
             editMeta<TextDisplayMeta> {
                 text =
-                    text(objective.color.name.lowercase().capitalize() + " Fragment", objective.color.textColor)
+                    text(objective.color.name.lowercase().capitalize() + " Relic", objective.color.textColor)
                 billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
                 isHasNoGravity = true
                 this
