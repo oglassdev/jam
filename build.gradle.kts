@@ -3,6 +3,7 @@ import java.security.MessageDigest
 plugins {
     kotlin("jvm") version "2.0.0"
     kotlin("plugin.serialization") version "2.0.0"
+    application
 
     id("io.github.goooler.shadow") version "8.1.7"
 }
@@ -70,6 +71,10 @@ task("generateResourcePack") {
 tasks.build { dependsOn("shadowJar") }
 
 tasks.test { useJUnitPlatform() }
+
+application {
+    mainClass.set("team.ktusers.jam.JamKt")
+}
 
 kotlin {
     jvmToolchain(21)
