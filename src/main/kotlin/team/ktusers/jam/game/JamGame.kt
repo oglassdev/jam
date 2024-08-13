@@ -63,7 +63,7 @@ import team.ktusers.jam.item.ColorSelector
 import team.ktusers.jam.item.getCustomItemData
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import kotlin.math.min
+import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
@@ -582,18 +582,24 @@ class JamGame : InstancedGame(
             players.forEach {
                 sidebar.removeViewer(it)
             }
-            val score: Int = min(teamInventory.colors.size * 5 - players.sumOf { it.deaths * 2 }, 0)
+            val score: Int = max(teamInventory.colors.size * 5 - players.sumOf { it.deaths * 2 }, 0)
             sendMessage(
                 newline() +
-                        text("                ɢᴀᴍᴇ ᴏᴠᴇʀᴠɪᴇᴡ", NamedTextColor.DARK_PURPLE) +
+                        text("                   ɢᴀᴍᴇ ᴏᴠᴇʀᴠɪᴇᴡ", NamedTextColor.DARK_PURPLE) +
                         newline() + newline() +
                         text("Score: ", NamedTextColor.LIGHT_PURPLE) +
                         text("$score/40", NamedTextColor.WHITE) +
+                        "      " +
+                        text("Colors: ", PaletteColor.ORANGE.textColor) +
+                        text("${teamInventory.colors.size}/8", NamedTextColor.GRAY) +
+                        "      " +
+                        text("Deaths: ", NamedTextColor.RED) +
+                        text(players.sumOf { it.deaths }.toString(), NamedTextColor.GRAY) +
                         newline() +
                         text("Most Colors: ", PaletteColor.ORANGE.textColor) +
                         (players.filter { it.colorCount > 0 }.maxByOrNull { it.deaths }?.name
                             ?: text("Nobody", NamedTextColor.DARK_GRAY)) +
-                        text("    -    ", NamedTextColor.GRAY) +
+                        "        " +
                         text("Most Deaths: ", NamedTextColor.RED) +
                         (players.filter { it.deaths > 0 }.maxByOrNull { it.deaths }?.name
                             ?: text("Nobody", NamedTextColor.DARK_GRAY)) +
