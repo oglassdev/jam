@@ -34,6 +34,7 @@ import net.kyori.adventure.text.Component.newline
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.title.Title
+import net.minestom.server.ServerFlag
 import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
 import net.minestom.server.entity.damage.Damage
@@ -52,6 +53,7 @@ import net.minestom.server.scoreboard.Sidebar
 import net.minestom.server.sound.SoundEvent
 import net.minestom.server.timer.TaskSchedule
 import net.minestom.server.utils.NamespaceID
+import net.minestom.server.utils.chunk.ChunkUtils
 import net.minestom.server.world.DimensionType
 import team.ktusers.jam.Config
 import team.ktusers.jam.Lobby
@@ -528,7 +530,20 @@ class JamGame : InstancedGame(
                         Title.title(text("You Died", NamedTextColor.RED), empty(), TIMES)
                     )
                     player.heal()
-                    player.teleport(Config.game.spawnPos)
+                    CoroutineScope(Dispatchers.Default).launch {
+                        coroutineScope {
+                            ChunkUtils.forChunksInRange(
+                                Config.game.spawnPos.chunkX(),
+                                Config.game.spawnPos.chunkZ(),
+                                ServerFlag.CHUNK_VIEW_DISTANCE
+                            ) { x, y ->
+                                launch {
+                                    player.sendChunk(instance.loadChunk(x, y).await())
+                                }
+                            }
+                        }
+                        player.teleport(Config.game.spawnPos)
+                    }
                     sendMessage(player.name + text(" died!", NamedTextColor.RED))
                     player.deaths++
                     sidebar.updateLineContent(
