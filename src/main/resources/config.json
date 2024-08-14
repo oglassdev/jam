@@ -1,6 +1,6 @@
 {
   "resource_pack": {
-    "require": false,
+    "require": true,
     "url": "https://r2.bladehunt.net/jam_pack.zip",
     "hash": "f14f00a181aaeb7d3f8ec34e9762cff5a56126f7"
   },
