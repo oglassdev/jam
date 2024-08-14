@@ -19,7 +19,7 @@ import java.time.Duration
 
 val CUTSCENE_REFERENCE = InstanceBuilder(InstanceManager.createInstanceContainer()).apply {
     polar {
-        fromPath("./cutscene.polar")
+        fromResource("/cutscene.polar")
     }
 
     instance.loadChunks(-9, -8, 10).join()
@@ -44,13 +44,17 @@ suspend fun intro(player: Player, instance: Instance) {
     val lab = Cutscene(
         instance, false, listOf(
             CutscenePosition(Pos(-126.5, -42.5, -194.5, 100f, 10f), 0),
-            CutscenePosition(Pos(-120.5, -42.5, -193.5, 95f, 4f), 40),
-            CutscenePosition(Pos(-101.5, -40.5, -201.5, 70f, 4f), 0),
-            CutscenePosition(Pos(-93.5, -34.5, -187.5, 117f, 10f), 40)
+            CutscenePosition(Pos(-96.5, -43.5, -185.5, 100f, 4f), 20),
+            CutscenePosition(Pos(-58.5, -43.5, -170.5, 180f, 4f), 30),
+            CutscenePosition(Pos(-18.5, -39.5, -151.5, -120f, 24f), 20),
+            CutscenePosition(Pos(-29.5, -39.5, -166.5, -130f, 30f), 20),
         ),
         listOf(
             CutsceneText("Scientists were experimenting with a form of dark matter!", Duration.ofMillis(3634)),
             CutsceneText("when suddenly the experiment went wrong!", Duration.ofMillis(5991 - 3634)),
+            CutsceneText("There was a LEAK!", Duration.ofMillis(7233 - 5991)),
+            CutsceneText("The dark matter started to spread!", Duration.ofMillis(8970 - 7233)),
+            CutsceneText("And only you, can stop it!", Duration.ofMillis(10671 - 8970))
         )
     )
 
@@ -63,38 +67,4 @@ suspend fun intro(player: Player, instance: Instance) {
         ), lab.camera
     )
     lab.start()
-
-    player.teleport(Pos(-15.5, -17.5, -154.5, 90f, 15f)).await()
-
-    val outsideLab = Cutscene(
-        instance, false, listOf(
-            CutscenePosition(Pos(-15.5, -17.5, -154.5, 90f, 15f), 0),
-            CutscenePosition(Pos(-2.5, 21.5, -153.5, 85f, 44f), 40),
-        ),
-        listOf(
-            CutsceneText("There was a LEAK!", Duration.ofMillis(7233 - 5991)),
-            CutsceneText("The dark matter started to spread!", Duration.ofMillis(8970 - 7233)),
-            CutsceneText("And only you, can stop it!", Duration.ofMillis(10671 - 8970))
-        )
-    )
-
-    outsideLab.addViewer(player)
-    outsideLab.start()
-
-    player.teleport(Pos(92.5, -2.5, -214.5, -140f, 50f)).await()
-
-    val village = Cutscene(
-        instance, false, listOf(
-            CutscenePosition(Pos(92.5, -2.5, -214.5, -140f, 50f), 0),
-            CutscenePosition(Pos(160.0, 16.5, -300.5, -150f, 60f), 40),
-        ),
-        listOf(
-            CutsceneText("There was a LEAK!", Duration.ofMillis(7233 - 5991)),
-            CutsceneText("The dark matter started to spread!", Duration.ofMillis(8970 - 7233)),
-            CutsceneText("And only you, can stop it!", Duration.ofMillis(10671 - 8970))
-        )
-    )
-
-    village.addViewer(player)
-    village.start()
 }

@@ -1,6 +1,6 @@
 {
   "resource_pack": {
-    "require": true,
+    "require": false,
     "url": "https://r2.bladehunt.net/jam_pack.zip",
     "hash": "dd116dbc4d02bbfb009e3b2323af38240846c5fb"
   },
@@ -101,13 +101,13 @@
           },
           {
             "pos": {
-              "x": -18,
+              "x": -22,
               "y": 4.0,
               "z": 45,
               "yaw": 90,
               "pitch": 0
             },
-            "color": "INDIGO"
+            "color": "RED"
           },
           {
             "pos": {

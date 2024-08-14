@@ -10,6 +10,7 @@ import net.bladehunt.kotstom.dsl.item.itemName
 import net.bladehunt.kotstom.dsl.item.lore
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.extension.adventure.text
+import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.coordinate.Pos
@@ -21,6 +22,7 @@ import net.minestom.server.event.trait.InstanceEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.inventory.InventoryType
 import net.minestom.server.item.Material
+import net.minestom.server.sound.SoundEvent
 import team.ktusers.jam.dsl.simpleGui
 import team.ktusers.jam.event.PlayerCollectColorEvent
 import team.ktusers.jam.game.JamGame
@@ -76,6 +78,14 @@ data class Buttons(val blocks: List<Button>, val color: PaletteColor) : Puzzle {
                 }
                 if (viewers.size == this@Buttons.blocks.size) inv.set(at(4, 1), clickItem) { clickEvent ->
                     with(game) {
+                        if (!clickers.contains(clickEvent.player.currentColor)) clickEvent.player.playSound(
+                            Sound.sound()
+                                .type(SoundEvent.ENTITY_ARROW_HIT_PLAYER)
+                                .volume(0.8f)
+                                .pitch(1.5f)
+                                .build()
+                        )
+                        
                         clickers.add(clickEvent.player.currentColor)
                     }
                     if (clickers.size >= this@Buttons.blocks.size) {

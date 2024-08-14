@@ -24,6 +24,7 @@ import team.ktusers.jam.command.JoinCommand
 import team.ktusers.jam.command.LobbyCommand
 import team.ktusers.jam.config.JamConfig
 import team.ktusers.jam.cutscene.CUTSCENE_REFERENCE
+import team.ktusers.jam.cutscene.cutsceneInstance
 import team.ktusers.jam.game.JamGame
 import java.net.InetSocketAddress
 import java.net.URI
@@ -122,7 +123,7 @@ suspend fun main() = blade(
 
     onConfigure {
         spawningInstance = Lobby
-        player.sendResourcePacks(rp)
+        if (Config.resourcePack.require) player.sendResourcePacks(rp)
     }
 
     host = InetSocketAddress("0.0.0.0", 25565)

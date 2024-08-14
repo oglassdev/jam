@@ -9,7 +9,9 @@ import net.bladehunt.kotstom.extension.adventure.plus
 import net.bladehunt.kotstom.extension.adventure.text
 import net.bladehunt.kotstom.extension.editMeta
 import net.bladehunt.minigamelib.GameManager
+import net.kyori.adventure.inventory.Book
 import net.kyori.adventure.text.Component.newline
+import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.NamedTextColor.*
 import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.coordinate.Vec
@@ -32,6 +34,73 @@ private val actionbarMessage = text("Welcome to ", color = GOLD) + text("cured",
 private val queueItem = item(Material.NETHER_STAR) {
     itemName = text("Play ", GRAY) + text("cured", TextDecoration.BOLD, color = DARK_GRAY)
 }
+private val handbookItem = item(Material.BOOK) {
+    itemName = text("Handbook", GRAY)
+}
+
+private val handbook = Book.builder()
+    .title(text("Handbook"))
+    .author(text("oglass, omega, ashyy, and sadness"))
+    .pages(
+        text(
+            """
+                cured.
+                
+                Cured is a team based game that requires a minimum of 3 players.
+                Players must work together to get all 7 relics within 9 minutes.
+                
+                Next section: Puzzle - Safe
+            """.trimIndent()
+        ),
+        text(
+            """
+                Puzzle - Safe (red & green)
+                
+                Reference: Glowing Command Blocks
+                Players must guess a 3 number combination to receive a relic. The possible (unique) numbers are colored in gray.
+
+                Next section: Puzzle - Fragments
+            """.trimIndent()
+        ),
+        text(
+            """
+                Puzzle - Fragments (orange & blue)
+                
+                Reference: Glowing Items (Right click)
+                Players must search around the map for fragments of relics. Upon retrieval of all three, the relic will be acquired.
+                
+                Next section: Puzzle - Buttons
+            """.trimIndent()
+        ),
+        text(
+            """
+                Puzzle - Safe (yellow & indigo)
+                
+                Reference: Glowing Chain Command Blocks
+                Three players must work together to press a button in an inventory while having different colors selected.
+                
+                Next section: Puzzle - Lasers
+            """.trimIndent()
+        ),
+        text(
+            """
+                Puzzle - Lasers (violet)
+                
+                Reference: Glowing item objective
+                Players must traverse a laser filled house to retrieve the relic at the end.
+                
+                Next section: Gameplay - Relics
+            """.trimIndent()
+        ),
+        text(
+            """
+                Gameplay - Relics
+                
+                After finding all the relics, they must be placed in the center to shoot lasers at the dark matter.
+            """.trimIndent()
+        )
+    )
+    .build()
 
 val Lobby = InstanceBuilder(InstanceManager.createInstanceContainer(JamGame.DIMENSION)).apply {
     polar { fromResource("/lobby.polar") }
@@ -42,7 +111,14 @@ val Lobby = InstanceBuilder(InstanceManager.createInstanceContainer(JamGame.DIME
         event.player.heal()
 
         val inventory = event.player.inventory
-        inventory.setItemStack(4, queueItem)
+        inventory.setItemStack(8, queueItem)
+        inventory.setItemStack(0, handbookItem)
+        event.player.sendMessage(
+            text(
+                "Welcome to cured! Please read the handbook to get an idea on how to play.",
+                GRAY
+            )
+        )
 
         event.player.sendPlayerListHeaderAndFooter(
             text("┌                                     ┐ ") +
@@ -58,6 +134,12 @@ val Lobby = InstanceBuilder(InstanceManager.createInstanceContainer(JamGame.DIME
         when (it.itemStack) {
             queueItem -> {
                 it.player.openInventory(queueGui())
+            }
+
+            handbookItem -> {
+                it.player.openBook(
+                    handbook
+                )
             }
 
             else -> {}
