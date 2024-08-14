@@ -10,7 +10,7 @@ import team.ktusers.jam.generated.PaletteColor
 data class PlayerChangeColorEvent(
     override val game: Game,
     val changer: Player,
-    val fromColor: PaletteColor,
+    val fromColor: PaletteColor?,
     val toColor: PaletteColor
 ) : GameEvent, PlayerInstanceEvent, CancellableEvent {
     private var cancelled: Boolean = false

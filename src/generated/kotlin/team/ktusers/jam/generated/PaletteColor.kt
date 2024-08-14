@@ -19,7 +19,6 @@ public enum class PaletteColor(
   INDIGO(0x4b0082),
   VIOLET(0x8f00ff),
   GREY(0x646464),
-  BLACK(0x19181c),
   NONE(0x000000),
   ;
 

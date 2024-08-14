@@ -11,7 +11,8 @@ class Camera : Entity(EntityType.TEXT_DISPLAY) {
         editMeta<TextDisplayMeta> {
             this.text = Component.empty()
             setNoGravity(true)
-            this.transformationInterpolationStartDelta = 0
+            posRotInterpolationDuration = 0
+            transformationInterpolationStartDelta = -1
             this
         }
     }

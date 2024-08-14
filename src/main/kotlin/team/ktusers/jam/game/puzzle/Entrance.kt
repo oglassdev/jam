@@ -3,7 +3,6 @@ package team.ktusers.jam.game.puzzle
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.bladehunt.kotstom.GlobalEventHandler
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.dsl.scheduleTask
 import net.bladehunt.kotstom.extension.adventure.plus
@@ -16,45 +15,49 @@ import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.trait.InstanceEvent
 import net.minestom.server.timer.TaskSchedule
-import team.ktusers.jam.event.PlayerCollectColorEvent
+import team.ktusers.jam.Skin
 import team.ktusers.jam.game.JamGame
-import team.ktusers.jam.generated.PaletteColor
 import team.ktusers.jam.util.PlayerNpc
 
 @Serializable
 @SerialName("entrance")
 data class Entrance(val pos: @Contextual Pos) : Puzzle {
-    private val prefix = text("Guide: ", NamedTextColor.GRAY)
+    private val prefix = text("Wanderer: ", NamedTextColor.GRAY)
 
     override fun onElementStart(game: JamGame, eventNode: EventNode<InstanceEvent>) {
-        val npc = PlayerNpc("_npc_entr")
+        val npc = PlayerNpc("_npc_entr", Skin.ADVENTURER)
 
         npc.setInstance(game.instance, pos).thenAccept {
-            npc.addPassenger(PlayerNpc.Name(text("Wanderer")))
+            npc.addPassenger(PlayerNpc.Name(text("Wanderer", NamedTextColor.DARK_PURPLE)))
         }
+
+        npc.scheduleTask(delay = TaskSchedule.nextTick(), repeat = TaskSchedule.nextTick()) {
+            it.lookAt(it.viewers.asSequence()
+                .filter { viewer -> viewer.getDistanceSquared(it) < 8 * 8 }
+                .minByOrNull { viewer -> viewer.getDistanceSquared(it) }
+                ?: return@scheduleTask)
+        }
+
         var hasInteracted = false
         var isComplete = false
 
         fun onInteract(player: Player) {
             if (hasInteracted) {
-                if (isComplete) player.sendMessage(text("You've already collected my relic!", NamedTextColor.RED))
+                if (isComplete) player.sendMessage(prefix + "Keep going! I believe in you!")
                 return
             }
             hasInteracted = true
             npc.scheduler().scheduleTask(delay = TaskSchedule.seconds(0), repeat = TaskSchedule.stop()) {
-                game.sendMessage(prefix + "It's dark in here... but I found something that might help")
+                game.sendMessage(prefix + "I've been stuck here for ages!")
             }
             npc.scheduler().scheduleTask(delay = TaskSchedule.seconds(3), repeat = TaskSchedule.stop()) {
-                game.sendMessage(prefix + "It says that it can restore a color for the chosen ones...")
+                game.sendMessage(prefix + "I might know some information that could help you...")
             }
             npc.scheduler().scheduleTask(delay = TaskSchedule.seconds(6), repeat = TaskSchedule.stop()) {
-                game.sendMessage(prefix + "The relic isn't working for me. Maybe you should try it.")
-            }
-            npc.scheduler().scheduleTask(delay = TaskSchedule.seconds(7), repeat = TaskSchedule.stop()) {
-                GlobalEventHandler.call(PlayerCollectColorEvent(game, player, PaletteColor.YELLOW))
+                game.sendMessage(prefix + "Your glasses can view different colors. Head over to the color selector and try it out.")
             }
             npc.scheduler().scheduleTask(delay = TaskSchedule.seconds(9), repeat = TaskSchedule.stop()) {
-                game.sendMessage(prefix + "It worked! I've heard some information that other relics that can cure the town can be earned from doing puzzles.")
+                game.sendMessage(prefix + "You can only see the colors with your glasses until you collect them by doing their puzzles.")
                 isComplete = true
             }
         }

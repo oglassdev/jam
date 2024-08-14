@@ -45,7 +45,7 @@ fun colorSelector(game: JamGame) =
         val inv = game.teamInventory
         set(
             at(2, 1),
-            getItem(text("Red", PaletteColor.RED.textColor), Material.RED_WOOL, inv.isCollected(PaletteColor.RED)),
+            getItem(text("Red", PaletteColor.RED.textColor), Material.RED_WOOL, inv.colors.contains(PaletteColor.RED)),
             handler(PaletteColor.RED)
         )
         set(
@@ -53,7 +53,7 @@ fun colorSelector(game: JamGame) =
             getItem(
                 text("Orange", PaletteColor.ORANGE.textColor),
                 Material.ORANGE_WOOL,
-                inv.isCollected(PaletteColor.ORANGE)
+                inv.colors.contains(PaletteColor.ORANGE)
             ),
             handler(PaletteColor.ORANGE)
         )
@@ -62,7 +62,7 @@ fun colorSelector(game: JamGame) =
             getItem(
                 text("Yellow", PaletteColor.YELLOW.textColor),
                 Material.YELLOW_WOOL,
-                inv.isCollected(PaletteColor.YELLOW)
+                inv.colors.contains(PaletteColor.YELLOW)
             ),
             handler(PaletteColor.YELLOW)
         )
@@ -71,13 +71,17 @@ fun colorSelector(game: JamGame) =
             getItem(
                 text("Green", PaletteColor.GREEN.textColor),
                 Material.GREEN_WOOL,
-                inv.isCollected(PaletteColor.GREEN)
+                inv.colors.contains(PaletteColor.GREEN)
             ),
             handler(PaletteColor.GREEN)
         )
         set(
             at(6, 1),
-            getItem(text("Blue", PaletteColor.BLUE.textColor), Material.BLUE_WOOL, inv.isCollected(PaletteColor.BLUE)),
+            getItem(
+                text("Blue", PaletteColor.BLUE.textColor),
+                Material.BLUE_WOOL,
+                inv.colors.contains(PaletteColor.BLUE)
+            ),
             handler(PaletteColor.BLUE)
         )
 
@@ -86,7 +90,7 @@ fun colorSelector(game: JamGame) =
             getItem(
                 text("Indigo", PaletteColor.INDIGO.textColor),
                 Material.PURPLE_WOOL,
-                inv.isCollected(PaletteColor.INDIGO)
+                inv.colors.contains(PaletteColor.INDIGO)
             ),
             handler(PaletteColor.INDIGO)
         )
@@ -95,13 +99,17 @@ fun colorSelector(game: JamGame) =
             getItem(
                 text("Violet", PaletteColor.VIOLET.textColor),
                 Material.MAGENTA_WOOL,
-                inv.isCollected(PaletteColor.VIOLET)
+                inv.colors.contains(PaletteColor.VIOLET)
             ),
             handler(PaletteColor.VIOLET)
         )
         set(
             at(5, 2),
-            getItem(text("Grey", PaletteColor.GREY.textColor), Material.GRAY_WOOL, inv.isCollected(PaletteColor.GREY)),
+            getItem(
+                text("Grey", PaletteColor.GREY.textColor),
+                Material.GRAY_WOOL,
+                inv.colors.contains(PaletteColor.GREY)
+            ),
             handler(PaletteColor.GREY)
         )
     }

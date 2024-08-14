@@ -8,9 +8,18 @@ import team.ktusers.jam.game.puzzle.Puzzle
 
 @Serializable
 data class JamConfig(
+    @SerialName("resource_pack")
+    val resourcePack: ResourcePack,
     val lobby: Lobby,
     val game: Game
 ) {
+    @Serializable
+    data class ResourcePack(
+        val require: Boolean,
+        val url: String,
+        val hash: String
+    )
+
     @Serializable
     data class Lobby(
         @SerialName("spawn_pos") val spawnPos: @Contextual Pos,

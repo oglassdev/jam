@@ -11,8 +11,8 @@
         { "name": "DiffuseSampler" }
     ],
     "uniforms": [
-        { "name": "Size",        "type": "int",       "count": 1,  "values": [ 16 ] },
-        { "name": "ProjMat",     "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
-        { "name": "InSize",      "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] }
+        { "name": "Size",          "type": "int",       "count": 1,  "values": [ 12 ] },
+        { "name": "ProjMat",       "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "InSize",        "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] }
     ]
 }

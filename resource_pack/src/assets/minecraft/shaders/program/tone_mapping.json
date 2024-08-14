@@ -1,0 +1,20 @@
+{
+    "blend": {
+        "func": "add",
+        "srcrgb": "one",
+        "dstrgb": "zero"
+    },
+    "vertex": "default",
+    "fragment": "tone_mapping",
+    "attributes": [ "Position" ],
+    "samplers": [
+        { "name": "DiffuseSampler" },
+        { "name": "DepthSampler" }
+    ],
+    "uniforms": [
+        { "name": "Exposure",     "type": "float",     "count": 1,  "values": [ 1.00 ]  },
+        { "name": "Gamma",        "type": "float",     "count": 1,  "values": [ 1.00 ] },
+        { "name": "ProjMat",      "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "InSize",       "type": "float",     "count": 2,  "values": [ 1.0, 1.0 ] }
+    ]
+}
