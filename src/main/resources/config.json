@@ -2,7 +2,7 @@
   "resource_pack": {
     "require": false,
     "url": "https://r2.bladehunt.net/jam_pack.zip",
-    "hash": "dd116dbc4d02bbfb009e3b2323af38240846c5fb"
+    "hash": "f14f00a181aaeb7d3f8ec34e9762cff5a56126f7"
   },
   "lobby": {
     "spawn_pos": {
