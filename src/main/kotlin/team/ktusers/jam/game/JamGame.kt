@@ -451,14 +451,6 @@ class JamGame : InstancedGame(
             }
 
             suspendCoroutine { continuation ->
-                teamInventory.colors.add(PaletteColor.RED)
-                teamInventory.colors.add(PaletteColor.ORANGE)
-                teamInventory.colors.add(PaletteColor.YELLOW)
-                teamInventory.colors.add(PaletteColor.GREEN)
-                teamInventory.colors.add(PaletteColor.BLUE)
-                teamInventory.colors.add(PaletteColor.INDIGO)
-                teamInventory.colors.add(PaletteColor.VIOLET)
-
                 players.forEach {
                     it.teleport(Config.game.spawnPos)
                 }
