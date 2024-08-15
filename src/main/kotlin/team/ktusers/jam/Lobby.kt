@@ -74,7 +74,7 @@ private val handbook = Book.builder()
         ),
         text(
             """
-                Puzzle - Safe (yellow & indigo)
+                Puzzle - Buttons (yellow & indigo)
                 
                 Reference: Glowing Chain Command Blocks
                 Three players must work together to press a button in an inventory while having different colors selected.

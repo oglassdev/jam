@@ -10,10 +10,12 @@ import net.bladehunt.kotstom.dsl.item.itemName
 import net.bladehunt.kotstom.dsl.item.lore
 import net.bladehunt.kotstom.dsl.listen
 import net.bladehunt.kotstom.extension.adventure.text
+import net.bladehunt.kotstom.extension.editMeta
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.coordinate.Pos
+import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.inventory.InventoryCloseEvent
 import net.minestom.server.event.inventory.InventoryOpenEvent
@@ -85,12 +87,18 @@ data class Buttons(val blocks: List<Button>, val color: PaletteColor) : Puzzle {
                                 .pitch(1.5f)
                                 .build()
                         )
-                        
+
                         clickers.add(clickEvent.player.currentColor)
                     }
                     if (clickers.size >= this@Buttons.blocks.size) {
                         clickEvent.inventory?.viewers?.forEach {
                             it.closeInventory()
+                        }
+                        blocks.forEach {
+                            it.editMeta<BlockDisplayMeta> {
+                                this.isHasGlowingEffect = false
+                                this
+                            }
                         }
                         isComplete = true
                         GlobalEventHandler.call(PlayerCollectColorEvent(game, clickEvent.player, color))

@@ -51,6 +51,7 @@ import net.minestom.server.network.packet.server.play.MultiBlockChangePacket
 import net.minestom.server.particle.Particle
 import net.minestom.server.scoreboard.Sidebar
 import net.minestom.server.sound.SoundEvent
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import net.minestom.server.utils.NamespaceID
 import net.minestom.server.utils.chunk.ChunkUtils
@@ -72,6 +73,7 @@ import kotlin.coroutines.suspendCoroutine
 import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class JamGame : InstancedGame(
@@ -165,6 +167,7 @@ class JamGame : InstancedGame(
                                                     block.contains("glass") ||
                                                     block.contains("water") ||
                                                     block.contains("lava") ||
+                                                    block.contains("lily_pad") ||
                                                     current.properties().contains("waterlogged") -> continue
 
                                             block.contains("fern") ||
@@ -351,6 +354,11 @@ class JamGame : InstancedGame(
     init {
         instance.eventNode().listen<PlayerChunkLoadEvent> { event ->
             val points = POINT_COLORS[event.player.currentColor] ?: return@listen
+            points.filterIsInstance<MultiBlockChangePacket>().filter {
+                val sectionX = (it.chunkSectionPosition shr 42).toInt()
+                val sectionZ = (it.chunkSectionPosition shl 22 shr 42).toInt()
+                (event.chunkX == sectionX) && (event.chunkZ == sectionZ)
+            }
             event.player.sendPackets(points as Collection<SendablePacket>)
         }
     }
@@ -433,24 +441,32 @@ class JamGame : InstancedGame(
             val start = System.currentTimeMillis()
             val duration = 9.minutes
 
-            val task = instance.scheduler().scheduleTask(
-                delay = TaskSchedule.seconds(1),
-                repeat = TaskSchedule.seconds(1)
-            ) {
-                val elapsed = duration - (System.currentTimeMillis() - start).milliseconds
-                sidebar.updateLineContent(
-                    "timer",
-                    text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text(
-                        String.format(
-                            "%02d:%02d",
-                            elapsed.inWholeMinutes,
-                            elapsed.inWholeSeconds % 60
-                        ), NamedTextColor.GRAY
-                    )
-                )
-            }
+            var task: Task? = null
+
+            var isCured = false
 
             suspendCoroutine { continuation ->
+                task = instance.scheduler().scheduleTask(
+                    delay = TaskSchedule.seconds(1)
+                ) {
+                    val elapsed = duration - (System.currentTimeMillis() - start).milliseconds
+                    sidebar.updateLineContent(
+                        "timer",
+                        text("ʀᴇᴍᴀɪɴɪɴɢ: ", NamedTextColor.WHITE) + text(
+                            String.format(
+                                "%02d:%02d",
+                                elapsed.inWholeMinutes,
+                                elapsed.inWholeSeconds % 60
+                            ), NamedTextColor.GRAY
+                        )
+                    )
+
+                    if (elapsed.inWholeSeconds <= 0) {
+                        continuation.resume(Unit)
+                        TaskSchedule.stop()
+                    } else TaskSchedule.seconds(1)
+                }
+
                 players.forEach {
                     it.teleport(Config.game.spawnPos)
                 }
@@ -659,20 +675,27 @@ class JamGame : InstancedGame(
 
                 eventNode.listen<PlayerPlaceAllRelicsEvent> {
                     continuation.resume(Unit)
+                    isCured = true
                 }
             }
 
-            task.cancel()
+            if (isCured) {
+                COMPLETION_BATCH.apply(instance, null)
 
-            COMPLETION_BATCH.apply(instance, null)
+                sendMessage(text("You successfully cured the town!", NamedTextColor.GREEN))
 
-            sendMessage(text("You successfully cured the town!", NamedTextColor.GREEN))
+                playSound(
+                    Sound.sound()
+                        .type(SoundEvent.ENTITY_ENDER_DRAGON_DEATH)
+                        .build()
+                )
 
-            playSound(
-                Sound.sound()
-                    .type(SoundEvent.ENTITY_ENDER_DRAGON_DEATH)
-                    .build()
-            )
+                task?.cancel()
+            } else {
+                sendMessage(text("You didn't cure the town in time!", NamedTextColor.RED))
+            }
+
+
             delay(5000)
         }
         +element {

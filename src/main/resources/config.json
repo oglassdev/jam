@@ -1,13 +1,13 @@
 {
   "resource_pack": {
     "require": true,
-    "url": "https://r2.bladehunt.net/jam_pack.zip",
-    "hash": "f14f00a181aaeb7d3f8ec34e9762cff5a56126f7"
+    "url": "https://r2.bladehunt.net/updated_pack.zip",
+    "hash": "766cf04a59f47bec5cd6e7962d50a78addf2fa5c"
   },
   "lobby": {
     "spawn_pos": {
       "x": 0.5,
-      "y": -19.0,
+      "y": -15.0,
       "z": 0.5,
       "yaw": 180,
       "pitch": 0
@@ -23,7 +23,7 @@
   "game": {
     "spawn_pos": {
       "x": 26.5,
-      "y": 3.0,
+      "y": 5.0,
       "z": 21.5,
       "yaw": 180,
       "pitch": 0

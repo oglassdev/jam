@@ -19,6 +19,7 @@ import net.kyori.adventure.resource.ResourcePackRequest
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor.GRAY
 import net.minestom.server.event.player.PlayerChatEvent
+import net.minestom.server.extras.bungee.BungeeCordProxy
 import team.ktusers.jam.command.CutsceneCommand
 import team.ktusers.jam.command.JoinCommand
 import team.ktusers.jam.command.LobbyCommand
@@ -96,7 +97,7 @@ suspend fun main() = blade(
         }*/
 
 
-    CommandManager.register(LobbyCommand, JoinCommand, CutsceneCommand)
+    CommandManager.register(LobbyCommand, JoinCommand)
 
     GlobalEventHandler.listen<PlayerChatEvent> { event ->
         event.recipients.removeIf { it.instance != event.player.instance }
